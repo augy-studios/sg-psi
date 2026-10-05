@@ -1,0 +1,12 @@
+{
+  "name": "sgpsi-site",
+  "private": true,
+  "description": "SG PSI at sgpsi.uwuapps.org: a static site plus Vercel Functions in api/.",
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

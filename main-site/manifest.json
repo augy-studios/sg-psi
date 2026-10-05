@@ -1,7 +1,7 @@
 {
     "name": "SG PSI by UwU Apps",
     "short_name": "SG PSI",
-    "description": "A simple sgpsi app; view live sgpsi at a glance!",
+    "description": "Singapore's air quality at a glance: live PSI, PM2.5 and wind across the island.",
     "icons": [{
             "src": "SGPSI-192.png",
             "type": "image/png",
@@ -26,9 +26,24 @@
             "form_factor": "wide"
         }
     ],
+    "shortcuts": [{
+            "name": "Map",
+            "short_name": "Map",
+            "description": "PSI and wind on the map",
+            "url": "/#map",
+            "icons": [{ "src": "SGPSI-192.png", "sizes": "192x192", "type": "image/png" }]
+        },
+        {
+            "name": "Trends",
+            "short_name": "Trends",
+            "description": "The last 24 hours and 7 days",
+            "url": "/#trends",
+            "icons": [{ "src": "SGPSI-192.png", "sizes": "192x192", "type": "image/png" }]
+        }
+    ],
     "start_url": "/",
-    "theme_color": "#cfc",
-    "background_color": "#cfc",
+    "theme_color": "#ccffcc",
+    "background_color": "#ccffcc",
     "display": "standalone",
     "display_override": ["fullscreen", "minimal-ui", "window-controls-overlay"],
     "orientation": "any",
@@ -37,8 +52,8 @@
     "scope": "/",
     "lang": "en",
     "categories": [
-        "entertainment",
-        "lifestyle",
+        "weather",
+        "health",
         "utilities"
     ]
 }

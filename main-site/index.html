@@ -2,6 +2,29 @@
 <html lang="en">
 
 <head>
+    <!-- Prevent theme flash: apply saved theme before paint. Keep the key in
+         sync with APP_KEY in js/theme.js. -->
+    <script>
+        (function () {
+            var k = 'sgpsi';
+            var m = localStorage.getItem(k + '.mode') || 'light';
+
+            // Time based mode. Resolved here rather than in theme.js because
+            // theme.js runs after first paint, and an evening reader would
+            // otherwise watch a white page turn dark. Keep the two hours in step
+            // with LIGHT_FROM_HOUR and LIGHT_UNTIL_HOUR in theme.js.
+            document.documentElement.setAttribute('data-mode-preference', m);
+            if (m === 'time') {
+                var h = new Date().getHours();
+                m = h >= 9 && h < 18 ? 'light' : 'dark';
+            }
+
+            var c = localStorage.getItem(k + '.colorTheme') || 'classic';
+            document.documentElement.setAttribute('data-mode', m);
+            document.documentElement.setAttribute('data-color-theme', c);
+        })();
+    </script>
+
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-FMCYFTFPEL"></script>
     <script>
@@ -14,22 +37,23 @@
 
         gtag('config', 'G-FMCYFTFPEL');
     </script>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9715826188316382"
-        crossorigin="anonymous"></script>
 
     <link rel="manifest" href="/manifest.json" />
 
     <meta charset="utf-8">
     <title>SG PSI | UwU Apps</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="A simple sgpsi app; view live sgpsi at a glance!">
+    <meta name="description" content="Singapore's air quality at a glance: live PSI, PM2.5 and wind across the island.">
 
     <meta property="og:type" content="website">
     <meta property="og:title" content="SG PSI | UwU Apps" />
     <meta property="og:site_name" content="UwU Apps" />
-    <meta property="og:description" content="A simple sgpsi app; view live sgpsi at a glance!" />
+    <meta property="og:description" content="Singapore's air quality at a glance: live PSI, PM2.5 and wind across the island." />
 
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Jua">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&display=swap">
+    <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
     <link rel="stylesheet" href="/style.css">
     <meta name="theme-color" content="#ccffcc" />
 
@@ -40,22 +64,266 @@
     <meta name="twitter:card" content="summary">
     <meta name="twitter:image:src" content="/SGPSI-main.png">
     <meta property="og:image" content="/SGPSI-main.png" />
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <script defer="" src="https://use.fontawesome.com/releases/v6.5.2/js/all.js"></script>
 </head>
 
 <body>
-    SG PSI
+    <!-- The nav, wordrain-game's floating tray: the views, then alerts and theme,
+         as glass buttons top right. Slides off the right edge, leaving the arrow tab. -->
+    <div class="hud-right">
+        <div id="tray" class="tray">
+            <button id="trayTab" class="tray-tab" type="button" aria-controls="trayButtons" aria-expanded="true" aria-label="Hide menu">
+                <span data-icon="chevron"></span>
+            </button>
+            <div id="trayButtons" class="tray-buttons">
+                <nav class="tray-views" role="tablist" aria-label="Views" aria-orientation="vertical">
+                    <button class="glass-btn" type="button" role="tab" id="tab-overview" data-view="overview" aria-controls="view-overview" aria-selected="true" aria-label="Overview" title="Overview"><span data-icon="gauge"></span></button>
+                    <button class="glass-btn" type="button" role="tab" id="tab-map" data-view="map" aria-controls="view-map" aria-selected="false" tabindex="-1" aria-label="Map" title="Map"><span data-icon="map"></span></button>
+                    <button class="glass-btn" type="button" role="tab" id="tab-trends" data-view="trends" aria-controls="view-trends" aria-selected="false" tabindex="-1" aria-label="Trends" title="Trends"><span data-icon="trend"></span></button>
+                    <button class="glass-btn" type="button" role="tab" id="tab-pollutants" data-view="pollutants" aria-controls="view-pollutants" aria-selected="false" tabindex="-1" aria-label="Pollutants" title="Pollutants"><span data-icon="flask"></span></button>
+                    <button class="glass-btn" type="button" role="tab" id="tab-wind" data-view="wind" aria-controls="view-wind" aria-selected="false" tabindex="-1" aria-label="Wind" title="Wind"><span data-icon="wind"></span></button>
+                </nav>
+                <span class="tray-rule" aria-hidden="true"></span>
+                <button class="glass-btn" id="alertsBtn" type="button" aria-haspopup="dialog" aria-label="PSI alerts" title="PSI alerts">
+                    <span data-icon="bell"></span>
+                </button>
+                <button class="glass-btn" id="themeBtn" type="button" aria-haspopup="dialog" aria-label="Theme" title="Theme">
+                    <span data-icon="sun"></span>
+                </button>
+            </div>
+        </div>
+    </div>
 
-    <script src="/script.js"></script>
+    <main class="container">
+        <header class="brand">
+            <div class="logo" aria-hidden="true"><span data-icon="wind"></span></div>
+            <div class="brand-text">
+                <h1>SG PSI | UwU Apps</h1>
+                <small>Made with <span class="heart" data-icon="heart" role="img" aria-label="love"></span> by Augy</small>
+            </div>
+        </header>
 
-    <script>
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('/sw.js');
-        }
-    </script>
-    
+        <!-- Over the map in the Map view, at the top of the column everywhere else. -->
+        <div class="status" id="status">
+            <p id="statusText" role="status">Loading the latest readings.</p>
+            <button class="icon-btn small" id="refreshBtn" type="button" aria-label="Refresh readings" title="Refresh">
+                <span data-icon="refresh"></span>
+            </button>
+        </div>
+
+        <!-- ---------- Overview ---------- -->
+        <section class="view" id="view-overview" role="tabpanel" aria-labelledby="tab-overview">
+            <article class="card glass">
+                <div class="card-header">
+                    <h2 class="card-title">24-hour PSI</h2>
+                    <span class="muted" id="psiTime"></span>
+                </div>
+                <div class="card-body">
+                    <div class="hero">
+                        <p class="hero-value" id="psiRange">--</p>
+                        <p class="band-chip" id="psiBand" hidden></p>
+                    </div>
+                    <p class="muted">Lowest to highest across the five regions.</p>
+                    <dl class="advice" id="advice"></dl>
+                    <p class="muted fine">
+                        NEA's health advisory for the 24-hour PSI. More at
+                        <a class="link" href="https://www.haze.gov.sg/" target="_blank" rel="noopener noreferrer">haze.gov.sg</a>.
+                    </p>
+                </div>
+            </article>
+
+            <article class="card glass">
+                <div class="card-header">
+                    <h2 class="card-title">1-hour PM2.5</h2>
+                    <span class="muted" id="pm25Time"></span>
+                </div>
+                <div class="card-body">
+                    <div class="hero">
+                        <p class="stat-value"><span id="pm25Range">--</span> <span class="unit">µg/m³</span></p>
+                        <p class="band-chip" id="pm25Band" hidden></p>
+                    </div>
+                    <p class="muted">
+                        Fine particles, the main part of haze. The hourly reading moves faster than the
+                        24-hour PSI, so a change shows here first.
+                    </p>
+                </div>
+            </article>
+
+            <h2 class="section-title">By region</h2>
+            <div class="region-grid" id="regionGrid"></div>
+        </section>
+
+        <!-- ---------- Map ---------- -->
+        <!-- Fills the screen. The map sits behind everything; the controls float on it. -->
+        <section class="view" id="view-map" role="tabpanel" aria-labelledby="tab-map" hidden>
+            <div id="map" role="region" aria-label="Map of Singapore with readings by region. Each pin is a region's reading; arrows show the wind."></div>
+            <div class="map-controls">
+                <div class="segmented glass" id="mapMetric" role="group" aria-label="Reading on the pins">
+                    <button type="button" data-metric="psi" aria-pressed="true" class="active">PSI</button>
+                    <button type="button" data-metric="pm25" aria-pressed="false">PM2.5</button>
+                </div>
+                <button type="button" class="toggle-btn glass active" id="mapWind" aria-pressed="true">
+                    <span data-icon="wind"></span>Wind
+                </button>
+            </div>
+        </section>
+
+        <!-- ---------- Trends ---------- -->
+        <section class="view" id="view-trends" role="tabpanel" aria-labelledby="tab-trends" hidden>
+            <div class="controls">
+                <div class="segmented" id="trendRange" role="group" aria-label="Time range">
+                    <button type="button" data-range="24h" aria-pressed="true" class="active">24 hours</button>
+                    <button type="button" data-range="7d" aria-pressed="false">7 days</button>
+                </div>
+                <div class="segmented" id="trendMetric" role="group" aria-label="Reading">
+                    <button type="button" data-metric="psi" aria-pressed="true" class="active">24-hour PSI</button>
+                    <button type="button" data-metric="pm25" aria-pressed="false">1-hour PM2.5</button>
+                </div>
+            </div>
+            <article class="card glass">
+                <div class="card-header">
+                    <h2 class="card-title" id="trendTitle">24-hour PSI</h2>
+                    <button type="button" class="toggle-btn" id="trendTableBtn" aria-pressed="false">
+                        <span data-icon="table"></span>Table
+                    </button>
+                </div>
+                <div class="card-body">
+                    <p class="muted" id="trendSummary">Loading.</p>
+                    <div id="trendChart"></div>
+                    <div class="table-wrap" id="trendTable" hidden></div>
+                </div>
+            </article>
+        </section>
+
+        <!-- ---------- Pollutants ---------- -->
+        <section class="view" id="view-pollutants" role="tabpanel" aria-labelledby="tab-pollutants" hidden>
+            <article class="card glass">
+                <div class="card-header">
+                    <h2 class="card-title">Sub-indices</h2>
+                    <span class="muted" id="polTime"></span>
+                </div>
+                <div class="card-body">
+                    <p class="muted">
+                        Each pollutant gets its own index on the PSI scale. A region's PSI is its highest
+                        sub-index, marked in each column.
+                    </p>
+                    <div class="table-wrap" id="subTable"></div>
+                </div>
+            </article>
+            <article class="card glass">
+                <div class="card-header">
+                    <h2 class="card-title">Concentrations</h2>
+                </div>
+                <div class="card-body">
+                    <p class="muted">The measurements behind the sub-indices, each averaged over the period NEA uses for it.</p>
+                    <div class="table-wrap" id="concTable"></div>
+                </div>
+            </article>
+        </section>
+
+        <!-- ---------- Wind ---------- -->
+        <section class="view" id="view-wind" role="tabpanel" aria-labelledby="tab-wind" hidden>
+            <div class="tiles" id="windTiles"></div>
+            <article class="card glass">
+                <div class="card-header">
+                    <h2 class="card-title">Average wind speed, last 24 hours</h2>
+                </div>
+                <div class="card-body">
+                    <p class="muted" id="windSummary">Loading.</p>
+                    <div id="windChart"></div>
+                </div>
+            </article>
+            <article class="card glass">
+                <div class="card-header">
+                    <h2 class="card-title">By station</h2>
+                    <span class="muted" id="windTime"></span>
+                </div>
+                <div class="card-body">
+                    <ul class="station-list" id="stationList"></ul>
+                </div>
+            </article>
+        </section>
+
+        <footer class="site-footer">
+            <p class="muted">
+                Readings from NEA via
+                <a class="link" href="https://data.gov.sg/" target="_blank" rel="noopener noreferrer">data.gov.sg</a>.
+                Map tiles from
+                <a class="link" href="https://www.onemap.gov.sg/" target="_blank" rel="noopener noreferrer">OneMap</a>
+                and <a class="link" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>.
+            </p>
+            <p class="muted">
+                <a class="link" href="https://augystudios.com/terms" target="_blank" rel="noopener noreferrer">Terms</a> ·
+                <a class="link" href="https://augystudios.com/privacy" target="_blank" rel="noopener noreferrer">Privacy</a> ·
+                <a class="link" href="https://forms.gle/4wKTdjgiC6MGX1aN8" target="_blank" rel="noopener noreferrer">Report an issue</a>
+            </p>
+        </footer>
+    </main>
+
+    <!-- ---------- Theme ---------- -->
+    <div class="modal-backdrop hidden" id="themeModal">
+        <div class="modal glass" role="dialog" aria-modal="true" aria-labelledby="themeModalTitle">
+            <div class="modal-head">
+                <h2 id="themeModalTitle">Theme</h2>
+                <button class="icon-btn small" type="button" data-close-modal="themeModal" aria-label="Close">
+                    <span data-icon="close"></span>
+                </button>
+            </div>
+            <p class="modal-section-label">Mode</p>
+            <div class="mode-toggle" id="modeToggle">
+                <button class="mode-btn" type="button" data-mode="light" aria-pressed="false"><span data-icon="sun"></span>Light</button>
+                <button class="mode-btn" type="button" data-mode="dark" aria-pressed="false"><span data-icon="moon"></span>Dark</button>
+                <button class="mode-btn mode-btn-wide" type="button" data-mode="time" aria-pressed="false"><span data-icon="clock"></span>Time-based</button>
+            </div>
+            <p class="mode-note" id="modeNote" hidden></p>
+            <p class="modal-section-label">Brand colour</p>
+            <div class="swatch-grid" id="swatchGrid"></div>
+        </div>
+    </div>
+
+    <!-- ---------- PSI alerts ---------- -->
+    <div class="modal-backdrop hidden" id="alertsModal">
+        <div class="modal glass" role="dialog" aria-modal="true" aria-labelledby="alertsModalTitle">
+            <div class="modal-head">
+                <h2 id="alertsModalTitle">PSI alerts</h2>
+                <button class="icon-btn small" type="button" data-close-modal="alertsModal" aria-label="Close">
+                    <span data-icon="close"></span>
+                </button>
+            </div>
+            <p class="muted">A notification when the 24-hour PSI reaches a level, even with SG PSI closed.</p>
+
+            <p class="modal-section-label">Where</p>
+            <div class="choice-grid" id="alertAreas">
+                <button type="button" class="choice choice-wide" data-alert-area="islandwide" aria-pressed="false">Any region</button>
+                <button type="button" class="choice" data-alert-area="north" aria-pressed="false">North</button>
+                <button type="button" class="choice" data-alert-area="south" aria-pressed="false">South</button>
+                <button type="button" class="choice" data-alert-area="east" aria-pressed="false">East</button>
+                <button type="button" class="choice" data-alert-area="west" aria-pressed="false">West</button>
+                <button type="button" class="choice choice-wide" data-alert-area="central" aria-pressed="false">Central</button>
+            </div>
+
+            <p class="modal-section-label">When it reaches</p>
+            <div class="choice-grid" id="alertLevels">
+                <button type="button" class="choice" data-alert-level="moderate" aria-pressed="false"><span class="band-dot" data-level="2"></span>Moderate, 51+</button>
+                <button type="button" class="choice" data-alert-level="unhealthy" aria-pressed="false"><span class="band-dot" data-level="3"></span>Unhealthy, 101+</button>
+                <button type="button" class="choice" data-alert-level="very-unhealthy" aria-pressed="false"><span class="band-dot" data-level="4"></span>Very unhealthy, 201+</button>
+                <button type="button" class="choice" data-alert-level="hazardous" aria-pressed="false"><span class="band-dot" data-level="5"></span>Hazardous, 301+</button>
+            </div>
+
+            <button type="button" class="btn alerts-toggle" id="alertsToggle">Turn alerts on</button>
+            <p class="alerts-note" id="alertsNote" role="status"></p>
+        </div>
+    </div>
+
+    <script src="/vendor/leaflet/leaflet.js" defer></script>
+    <script src="/js/icons.js" defer></script>
+    <script src="/js/ui.js" defer></script>
+    <script src="/js/theme.js" defer></script>
+    <script src="/js/bands.js" defer></script>
+    <script src="/js/charts.js" defer></script>
+    <script src="/js/map.js" defer></script>
+    <script src="/js/alerts.js" defer></script>
+    <script src="/script.js" defer></script>
+    <script src="/js/update.js" defer></script>
 </body>
 
 </html>
