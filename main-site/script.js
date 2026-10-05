@@ -128,8 +128,9 @@
     for (const v of VIEWS) document.body.classList.toggle(`view-${v}`, v === name);
     if (name !== "map") window.scrollTo({ top: 0 });
 
-    const hash = name === "overview" ? "" : `#${name}`;
-    if (location.hash !== hash) history.replaceState(null, "", hash || location.pathname);
+    // The address stays plain. A hash only ever arrives from outside (the manifest's
+    // shortcuts, an old link) to pick the first view, and is cleared once it has.
+    if (location.hash) history.replaceState(null, "", location.pathname + location.search);
 
     if (name === "map") window.SgMap.show();
     if (name === "trends") loadHistory(trendRange);
