@@ -71,9 +71,10 @@ Variables reach only deployments made after they are added, so redeploy afterwar
    away bursts, so each run fetches a few days, paced, and the quarter hourly runs
    carry on until `left` reaches 0, within the hour. After that, backfill only patches
    days that are missing hours.
-3. Trends then draws from Supabase. Wind history has no backfill (data.gov.sg keeps it
-   by the minute, dozens of pages a day), so the Wind chart fills in an hour at a time
-   from the first run.
+3. Trends then draws from Supabase. Wind is backfilled the same way and at the same
+   pace, an hour at a time: data.gov.sg answers a single moment with the reading then,
+   so each missing hour is two requests (`"windBackfilled": {"filled": [...], "left": n}`).
+   Newest first, so the Wind chart's last 24 hours fill within about 3 hours.
 4. On a phone, open the alerts bell, pick an area and a level, and turn alerts on. An
    alert comes when that area's 24-hour PSI next changes band at or above the level.
    On iPhone and iPad, only from the site added to the Home Screen.

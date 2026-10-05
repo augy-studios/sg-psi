@@ -56,6 +56,15 @@ async function get(path, params = {}, { retries = 0 } = {}) {
 
 export const latest = (path) => get(path);
 
+// The reading as it stood at one SGT moment, e.g. "2026-10-04T10:00:00": a single
+// reading, where a whole day of wind is dozens of pages.
+export const at = (path, moment, { retries = 0 } = {}) => get(path, { date: moment }, { retries });
+
+// A moment as data.gov.sg's `date` parameter wants it: SGT, to the second, no zone.
+export function sgMoment(ms) {
+  return new Date(ms + 8 * 3600 * 1000).toISOString().slice(0, 19);
+}
+
 // Every item (psi, pm25) or reading (wind) for one SGT date, following pages.
 export async function day(path, date, { retries = 0 } = {}) {
   const field = path.startsWith("wind") ? "readings" : "items";

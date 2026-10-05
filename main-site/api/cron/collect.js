@@ -8,17 +8,20 @@
 //   last seven with hours missing are fetched whole from data.gov.sg, newest first. That
 //   fills the charts after the first few runs and patches over outages. data.gov.sg
 //   refuses bursts (429), so each run asks for a few days at most, paced, and stops at
-//   the first refusal; the next quarter hour carries on. Wind is not backfilled: a day
-//   of it is dozens of pages.
+//   the first refusal; the next quarter hour carries on.
+// - Wind backfill: the same, an hour at a time. A whole day of wind is dozens of pages,
+//   but data.gov.sg answers a single moment with the one reading then, so each missing
+//   hour is two requests: speed and direction.
 //
 // Supabase and the alerts are independent: either works without the other set up.
 
-import { RateLimited, byRegion, day, latest, psiReadings, sgDate, windStations } from "../_lib/datagov.js";
+import { RateLimited, at, byRegion, day, latest, psiReadings, sgDate, sgMoment, windStations } from "../_lib/datagov.js";
 import { T, rest, supabaseConfigured, upsert } from "../_lib/supabase.js";
 import { notifyPsi, pushConfigured } from "../_push/notify.js";
 import { releaseLock, storeConfigured, takeLock } from "../_push/store.js";
 
-const DAY_MS = 24 * 3600 * 1000;
+const HOUR_MS = 3600 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 const BACKFILL_DAYS = 7;
 // A day with at least this many hours stored is left alone; NEA skips the odd hour.
 const FULL_DAY_HOURS = 22;
@@ -40,6 +43,25 @@ const pm25Row = (item) => ({
   pm25_updated_at: item.updatedTimestamp,
 });
 const hasRegions = (row, key) => Object.keys(row[key] || {}).length > 0;
+
+// One hour's wind snapshot from a speed and a direction answer, or null if they share no
+// station. Stored under the hour it falls in.
+function windRow(speedData, directionData) {
+  const stations = windStations(speedData, directionData);
+  const time = speedData?.readings?.[0]?.timestamp;
+  if (!stations.length || !time) return null;
+  const hour = new Date(time);
+  hour.setUTCMinutes(0, 0, 0);
+  return {
+    stations,
+    row: {
+      observed_at: hour.toISOString(),
+      reading_at: time,
+      speed: Object.fromEntries(stations.map((s) => [s.id, s.speed])),
+      direction: Object.fromEntries(stations.map((s) => [s.id, s.direction])),
+    },
+  };
+}
 
 export default async function handler(req, res) {
   // Vercel Cron sends CRON_SECRET as a bearer token; nobody else can make the server collect.
@@ -75,12 +97,14 @@ async function collect() {
   const psiItem = psi.status === "fulfilled" ? psi.value.items?.[0] : null;
   const pm25Item = pm25.status === "fulfilled" ? pm25.value.items?.[0] : null;
 
-  const result = { stored: null, backfilled: null, alerts: null };
+  const result = { stored: null, backfilled: null, windBackfilled: null, alerts: null };
 
   if (supabaseConfigured) {
     try {
       result.stored = await store(psiItem, pm25Item, speed, direction);
       result.backfilled = await backfill();
+      // Not straight after a refusal: data.gov.sg would only turn this away too.
+      result.windBackfilled = result.backfilled?.limited ? "skipped: data.gov.sg refused the PSI backfill" : await backfillWind();
     } catch (err) {
       console.error("collect: Supabase failed:", err.message);
       result.stored = { error: err.message };
@@ -119,24 +143,14 @@ async function store(psiItem, pm25Item, speed, direction) {
     out.pm25 = m.reading_at;
   }
 
-  if (speed.status === "fulfilled" && direction.status === "fulfilled") {
-    const stations = windStations(speed.value, direction.value);
-    const time = speed.value.readings?.[0]?.timestamp;
-    if (stations.length && time) {
-      const hour = new Date(time);
-      hour.setUTCMinutes(0, 0, 0);
-      // ignore: the hour's first snapshot stays; later runs in the same hour change nothing.
-      await upsert(T.wind, [{
-        observed_at: hour.toISOString(),
-        reading_at: time,
-        speed: Object.fromEntries(stations.map((s) => [s.id, s.speed])),
-        direction: Object.fromEntries(stations.map((s) => [s.id, s.direction])),
-      }], { onConflict: "observed_at", ignore: true });
-      await upsert(T.stations, stations.map((s) => ({
-        id: s.id, name: s.name, latitude: s.lat, longitude: s.lng, seen_at: new Date().toISOString(),
-      })), { onConflict: "id" });
-      out.wind = hour.toISOString();
-    }
+  const wind = speed.status === "fulfilled" && direction.status === "fulfilled" ? windRow(speed.value, direction.value) : null;
+  if (wind) {
+    // ignore: the hour's first snapshot stays; later runs in the same hour change nothing.
+    await upsert(T.wind, [wind.row], { onConflict: "observed_at", ignore: true });
+    await upsert(T.stations, wind.stations.map((s) => ({
+      id: s.id, name: s.name, latitude: s.lat, longitude: s.lng, seen_at: new Date().toISOString(),
+    })), { onConflict: "id" });
+    out.wind = wind.row.observed_at;
   }
   return out;
 }
@@ -178,6 +192,7 @@ async function backfill() {
 
   const filled = { psi: [], pm25: [] };
   let done = 0;
+  let limited = false;
   for (const { d, path, toRow, key } of todo.slice(0, BACKFILL_PER_RUN)) {
     // A pause first, after the live readings this run has just asked for too.
     await sleep(BACKFILL_GAP_MS);
@@ -187,7 +202,10 @@ async function backfill() {
     } catch (err) {
       console.warn(`backfill ${path} ${d}:`, err.message);
       // Turned away: asking for the rest now would only be turned away too.
-      if (err instanceof RateLimited) break;
+      if (err instanceof RateLimited) {
+        limited = true;
+        break;
+      }
       done++;
       continue;
     }
@@ -197,5 +215,50 @@ async function backfill() {
     if (fresh.length) filled[key].push(d);
   }
   // For the cron's log: how many day fetches the next quarter hour picks up.
-  return { ...filled, left: todo.length - done };
+  return { ...filled, left: todo.length - done, limited };
+}
+
+// Every hour in the last week with no wind snapshot, newest first, two at a time: the
+// same pace as the PSI backfill, two requests an hour. The hour still going is left to
+// the live snapshot.
+async function backfillWind() {
+  const now = Date.now();
+  const thisHour = Math.floor(now / HOUR_MS) * HOUR_MS;
+  const since = thisHour - BACKFILL_DAYS * DAY_MS;
+  const rows = await rest("GET", T.wind, {
+    params: { select: "observed_at", observed_at: `gte.${new Date(since).toISOString()}`, limit: "1000" },
+  });
+
+  // Every quarter hour, at the first run past it, unless there's nothing at all: then now.
+  if (rows.length && new Date().getUTCMinutes() % 15 >= 5) return null;
+
+  const have = new Set(rows.map((r) => Date.parse(r.observed_at)));
+  const missing = [];
+  for (let t = thisHour - HOUR_MS; t >= since; t -= HOUR_MS) if (!have.has(t)) missing.push(t);
+
+  const filled = [];
+  let done = 0;
+  for (const hour of missing.slice(0, BACKFILL_PER_RUN / 2)) {
+    const moment = sgMoment(hour);
+    let wind;
+    try {
+      await sleep(BACKFILL_GAP_MS);
+      const speed = await at("wind-speed", moment, { retries: 1 });
+      await sleep(BACKFILL_GAP_MS);
+      const direction = await at("wind-direction", moment, { retries: 1 });
+      wind = windRow(speed, direction);
+    } catch (err) {
+      console.warn(`backfill wind ${moment}:`, err.message);
+      if (err instanceof RateLimited) break;
+      done++;
+      continue;
+    }
+    done++;
+    // The reading data.gov.sg had at that moment can be from a minute or two before,
+    // in the hour before; stored under the hour asked for, which is what was missing.
+    if (!wind) continue;
+    await upsert(T.wind, [{ ...wind.row, observed_at: new Date(hour).toISOString() }], { onConflict: "observed_at", ignore: true });
+    filled.push(moment);
+  }
+  return { filled, left: missing.length - done };
 }
