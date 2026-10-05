@@ -4,14 +4,16 @@
 //
 // - PSI and PM2.5: one row per reading hour, overwritten when NEA revises it.
 // - Wind: the first reading seen in each hour, so a snapshot per hour.
-// - Backfill: at the top of each hour, or whenever the last week is empty, any SGT day
-//   in the last seven with hours missing is fetched whole from data.gov.sg. That fills
-//   the charts on the first run and patches over outages. Wind is not backfilled: a day
+// - Backfill: every quarter hour, or whenever the last week is empty, SGT days in the
+//   last seven with hours missing are fetched whole from data.gov.sg, newest first. That
+//   fills the charts after the first few runs and patches over outages. data.gov.sg
+//   refuses bursts (429), so each run asks for a few days at most, paced, and stops at
+//   the first refusal; the next quarter hour carries on. Wind is not backfilled: a day
 //   of it is dozens of pages.
 //
 // Supabase and the alerts are independent: either works without the other set up.
 
-import { byRegion, day, latest, psiReadings, sgDate, windStations } from "../_lib/datagov.js";
+import { RateLimited, byRegion, day, latest, psiReadings, sgDate, windStations } from "../_lib/datagov.js";
 import { T, rest, supabaseConfigured, upsert } from "../_lib/supabase.js";
 import { notifyPsi, pushConfigured } from "../_push/notify.js";
 import { releaseLock, storeConfigured, takeLock } from "../_push/store.js";
@@ -22,6 +24,14 @@ const BACKFILL_DAYS = 7;
 const FULL_DAY_HOURS = 22;
 // Longer than a run ever takes, shorter than the five minutes between them.
 const LOCK_SECONDS = 240;
+// Day fetches per run, and the pause before each: enough to fill a missing week within
+// the hour without data.gov.sg turning the run away.
+const BACKFILL_PER_RUN = 4;
+// Measured: one request every 3 s goes through keyless, while the run's four live
+// calls plus two quick day fetches get a 429.
+const BACKFILL_GAP_MS = 4000;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const psiRow = (item) => ({ reading_at: item.timestamp, psi: psiReadings(item), psi_updated_at: item.updatedTimestamp });
 const pm25Row = (item) => ({
@@ -142,8 +152,8 @@ async function backfill() {
     },
   });
 
-  // Hourly, at the first run past the hour, unless there's nothing at all: then now.
-  if (rows.length && new Date().getUTCMinutes() >= 5) return null;
+  // Every quarter hour, at the first run past it, unless there's nothing at all: then now.
+  if (rows.length && new Date().getUTCMinutes() % 15 >= 5) return null;
 
   const psiHours = {};
   const pm25Hours = {};
@@ -156,28 +166,36 @@ async function backfill() {
   const today = sgDate(Date.now());
   // Today counts only the hours gone so far, less one NEA may not have published yet.
   const expected = (d) => (d === today ? Math.max(0, new Date(Date.now() + 8 * 3600 * 1000).getUTCHours() - 1) : FULL_DAY_HOURS);
+  // Newest first: the days a reader sees first on the chart.
   const dates = [];
-  for (let i = BACKFILL_DAYS; i >= 0; i--) dates.push(sgDate(Date.now() - i * DAY_MS));
+  for (let i = 0; i <= BACKFILL_DAYS; i++) dates.push(sgDate(Date.now() - i * DAY_MS));
 
   const feeds = [
     { path: "psi", hours: psiHours, toRow: psiRow, key: "psi" },
     { path: "pm25", hours: pm25Hours, toRow: pm25Row, key: "pm25" },
   ];
+  const todo = dates.flatMap((d) => feeds.filter((f) => (f.hours[d] || 0) < expected(d)).map((f) => ({ d, ...f })));
+
   const filled = { psi: [], pm25: [] };
-  for (const d of dates) {
-    for (const { path, hours, toRow, key } of feeds) {
-      if ((hours[d] || 0) >= expected(d)) continue;
-      let items = [];
-      try {
-        items = await day(path, d);
-      } catch (err) {
-        // The next hour's run tries again.
-        console.warn(`backfill ${path} ${d}:`, err.message);
-      }
-      const fresh = items.map(toRow).filter((r) => hasRegions(r, key));
-      await upsert(T.readings, fresh, { onConflict: "reading_at" });
-      if (fresh.length) filled[key].push(d);
+  let done = 0;
+  for (const { d, path, toRow, key } of todo.slice(0, BACKFILL_PER_RUN)) {
+    // A pause first, after the live readings this run has just asked for too.
+    await sleep(BACKFILL_GAP_MS);
+    let items;
+    try {
+      items = await day(path, d, { retries: 1 });
+    } catch (err) {
+      console.warn(`backfill ${path} ${d}:`, err.message);
+      // Turned away: asking for the rest now would only be turned away too.
+      if (err instanceof RateLimited) break;
+      done++;
+      continue;
     }
+    done++;
+    const fresh = items.map(toRow).filter((r) => hasRegions(r, key));
+    await upsert(T.readings, fresh, { onConflict: "reading_at" });
+    if (fresh.length) filled[key].push(d);
   }
-  return filled;
+  // For the cron's log: how many day fetches the next quarter hour picks up.
+  return { ...filled, left: todo.length - done };
 }

@@ -494,19 +494,16 @@ body.modal-open { overflow: hidden; }
   padding: 6px 0 14px;
 }
 
+/* The app icon, which carries its own background. */
 .logo {
   flex-shrink: 0;
+  display: block;
   width: 44px;
   height: 44px;
-  display: grid;
-  place-items: center;
   border-radius: 14px;
-  background: var(--brand-fill);
   border: 1px solid var(--surface-border);
-  color: var(--on-brand);
+  object-fit: cover;
 }
-.logo > [data-icon] { display: inline-flex; }
-.logo svg { width: 24px; height: 24px; }
 
 .brand-text h1 {
   font-size: 1.25rem;
@@ -768,6 +765,12 @@ body.modal-open { overflow: hidden; }
   box-shadow: inset 0 0 0 2px var(--brand-ink);
   border-radius: 8px;
 }
+.data-table tr.gap td {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
 .data-table tr.total th,
 .data-table tr.total td {
   border-bottom: none;
@@ -985,7 +988,6 @@ body.view-map .status {
   padding: 2px 8px !important;
 }
 .leaflet-control-attribution a { color: var(--brand-ink); }
-.om-logo { width: 20px; height: 20px; vertical-align: middle; }
 
 .leaflet-popup-content-wrapper,
 .leaflet-popup-tip {
@@ -1002,9 +1004,9 @@ body.view-map .status {
 .leaflet-container a.leaflet-popup-close-button { color: var(--muted-strong); }
 .popup-title { color: var(--brand-ink); }
 
-/* OneMap has a Night style; OpenStreetMap, standing in for a failed tile, has
-   none, so in dark mode its light tiles are turned down to match. */
-:root[data-mode="dark"] .tile-fallback {
+/* OpenStreetMap has no dark style, so in dark mode its tiles are turned down to
+   match. Only the tile pane: the pins and controls keep their own colours. */
+:root[data-mode="dark"] .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9);
 }
 

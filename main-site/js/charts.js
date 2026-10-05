@@ -98,17 +98,23 @@
         label.textContent = opts.tickLabel(t, daily);
       }
 
-      // Lines, broken wherever a reading is missing.
+      // Lines, broken wherever a reading is missing: a null value, or a stretch of time
+      // with no readings at all. A line drawn straight across a missing day would look
+      // like data.
+      const maxGap = opts.maxGap ?? 2.5 * HOUR;
       for (const s of series) {
         let d = "";
         let pen = false;
+        let lastT = null;
         s.values.forEach((v, i) => {
           if (!Number.isFinite(v)) {
             pen = false;
             return;
           }
+          if (lastT != null && times[i] - lastT > maxGap) pen = false;
           d += `${pen ? "L" : "M"}${x(times[i]).toFixed(1)},${y(v).toFixed(1)}`;
           pen = true;
+          lastT = times[i];
         });
         el("path", { d, class: "chart-line", style: `stroke:${s.color}` }, svg);
 

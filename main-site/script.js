@@ -486,6 +486,10 @@
     $(`#${id}`).innerHTML = "";
   }
 
+  const HOUR_MS = 3600 * 1000;
+  // Readings come hourly; more than this between two rows means hours are missing.
+  const TABLE_GAP_MS = 1.5 * HOUR_MS;
+
   const GUIDES = {
     psi: [
       { value: 50, label: "Moderate" },
@@ -537,9 +541,16 @@
     $("#trendChart").hidden = trendTable;
     $("#trendTable").hidden = !trendTable;
     if (trendTable) {
-      $("#trendTable").innerHTML = `<table class="data-table">${headRow("Time")}<tbody>${points.map((p, i) => i).reverse().map((i) =>
-        `<tr><th scope="row">${esc(P.sgWhen(times[i]))}</th>${P.REGIONS.map((r) => `<td>${num(points[i][trendMetric]?.[r])}</td>`).join("")}</tr>`
-      ).join("")}</tbody></table>`;
+      // Newest first, with a row saying so wherever hours are missing, rather than
+      // letting Friday sit straight under Monday.
+      const rows = [];
+      for (let i = points.length - 1; i >= 0; i--) {
+        rows.push(`<tr><th scope="row">${esc(P.sgWhen(times[i]))}</th>${P.REGIONS.map((r) => `<td>${num(points[i][trendMetric]?.[r])}</td>`).join("")}</tr>`);
+        if (i > 0 && times[i] - times[i - 1] > TABLE_GAP_MS) {
+          rows.push(`<tr class="gap"><td colspan="${P.REGIONS.length + 1}">No readings from ${esc(P.sgWhen(times[i - 1] + HOUR_MS))} to ${esc(P.sgWhen(times[i] - HOUR_MS))}</td></tr>`);
+        }
+      }
+      $("#trendTable").innerHTML = `<table class="data-table">${headRow("Time")}<tbody>${rows.join("")}</tbody></table>`;
       return;
     }
 

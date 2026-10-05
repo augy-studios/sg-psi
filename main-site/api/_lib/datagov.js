@@ -23,14 +23,31 @@ export const REGIONS = [
 // stops a feed that keeps handing out tokens from looping.
 const MAX_PAGES = 10;
 
-async function get(path, params = {}) {
+// How long to wait before asking again after a 429, at most: data.gov.sg's Retry-After,
+// or a few seconds if it sends none.
+const MAX_RETRY_WAIT_MS = 10_000;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export class RateLimited extends Error {}
+
+// `retries`: how many times to wait and ask again after a 429. None for anything a page
+// is waiting on; the cron's backfill can afford to wait.
+async function get(path, params = {}, { retries = 0 } = {}) {
   const url = new URL(`${BASE}/${path}`);
   for (const [k, v] of Object.entries(params)) if (v != null) url.searchParams.set(k, v);
   const key = process.env.DATA_GOV_KEY;
-  const res = await fetch(url, {
-    headers: { accept: "application/json", ...(key ? { "x-api-key": key } : {}) },
-    signal: AbortSignal.timeout(10_000),
-  });
+  let res;
+  for (let attempt = 0; ; attempt++) {
+    res = await fetch(url, {
+      headers: { accept: "application/json", ...(key ? { "x-api-key": key } : {}) },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.status !== 429 || attempt >= retries) break;
+    const after = Number(res.headers.get("retry-after")) * 1000;
+    await sleep(Math.min(MAX_RETRY_WAIT_MS, after > 0 ? after : 5000 * (attempt + 1)));
+  }
+  if (res.status === 429) throw new RateLimited(`data.gov.sg ${path} answered 429`);
   if (!res.ok) throw new Error(`data.gov.sg ${path} answered ${res.status}`);
   const body = await res.json();
   if (body.code !== 0 || !body.data) throw new Error(`data.gov.sg ${path} said ${body.errorMsg || body.code}`);
@@ -40,12 +57,12 @@ async function get(path, params = {}) {
 export const latest = (path) => get(path);
 
 // Every item (psi, pm25) or reading (wind) for one SGT date, following pages.
-export async function day(path, date) {
+export async function day(path, date, { retries = 0 } = {}) {
   const field = path.startsWith("wind") ? "readings" : "items";
   const out = [];
   let token = null;
   for (let page = 0; page < MAX_PAGES; page++) {
-    const data = await get(path, { date, paginationToken: token });
+    const data = await get(path, { date, paginationToken: token }, { retries });
     out.push(...(data[field] || []));
     token = data.paginationToken;
     if (!token) break;

@@ -1,62 +1,27 @@
-// The Map view: Leaflet on OneMap's tiles, with each region's reading pinned at NEA's
-// label point and the wind drawn as an arrow at every weather station.
+// The Map view: Leaflet on OpenStreetMap's tiles, with each region's reading pinned at
+// NEA's label point and the wind drawn as an arrow at every weather station.
 //
-// OneMap's Default style in light mode and its Night style in dark, following the theme,
-// time-based mode included. Any tile OneMap can't serve is fetched from OpenStreetMap
-// instead, and OSM's credit joins the attribution the first time that happens.
+// OSM has no dark style, so in dark mode style.css turns the tiles down to match.
 // Plain script, not a module: published on window.SgMap. Leaflet is vendor/leaflet.
 
 (function () {
   const { psiBand, pm25Band, REGION_LABELS, compass, knotsToKmh } = window.SgPsi;
   const { esc } = window.UwuUI;
 
-  const ONEMAP_URL = "https://www.onemap.gov.sg/maps/tiles/{style}/{z}/{x}/{y}.png";
   const OSM_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-
-  // OneMap's own wording and links, which its terms ask for.
-  const ONEMAP_ATTRIBUTION =
-    '<img class="om-logo" src="https://www.onemap.gov.sg/web-assets/images/logo/om_logo.png" alt="" width="20" height="20"/>' +
-    '&nbsp;<a href="https://www.onemap.gov.sg/" target="_blank" rel="noopener noreferrer">OneMap</a>' +
-    '&nbsp;&copy;&nbsp;contributors&nbsp;&#124;&nbsp;' +
-    '<a href="https://www.sla.gov.sg/" target="_blank" rel="noopener noreferrer">Singapore Land Authority</a>';
   const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
 
   // The main island, which the map opens fitted to on any screen, and a looser box the
-  // view is held to. OneMap serves zoom 10 to 19 here.
+  // view is held to.
   const ISLAND = [[1.23, 103.62], [1.47, 104.03]];
   const BOUNDS = [[1.1, 103.5], [1.55, 104.15]];
 
   let map = null;
-  let tiles = null;
   let regionLayer = null;
   let windLayer = null;
   let data = null;
   let metric = "psi";
   let showWind = true;
-
-  // A OneMap tile that fails is tried once more from OSM before Leaflet hears about it.
-  const FallbackTiles = L.TileLayer.extend({
-    createTile(coords, done) {
-      const tile = document.createElement("img");
-      tile.alt = "";
-      tile.setAttribute("role", "presentation");
-      // CORS, so the service worker can keep a copy that works offline.
-      tile.crossOrigin = "anonymous";
-      let fellBack = false;
-      L.DomEvent.on(tile, "load", () => done(null, tile));
-      L.DomEvent.on(tile, "error", (e) => {
-        if (fellBack) return done(e, tile);
-        fellBack = true;
-        tile.classList.add("tile-fallback");
-        tile.src = L.Util.template(OSM_URL, coords);
-        this.fire("fallback");
-      });
-      tile.src = this.getTileUrl(coords);
-      return tile;
-    },
-  });
-
-  const styleForMode = () => (document.documentElement.getAttribute("data-mode") === "dark" ? "Night" : "Default");
 
   function init() {
     map = L.map("map", {
@@ -77,22 +42,13 @@
     new ResizeObserver(() => map.invalidateSize()).observe(map.getContainer());
     map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer">Leaflet</a>');
 
-    tiles = new FallbackTiles(ONEMAP_URL, {
-      style: styleForMode(),
+    L.tileLayer(OSM_URL, {
       minZoom: 10,
       maxZoom: 18,
-      detectRetina: true,
-      attribution: ONEMAP_ATTRIBUTION,
+      attribution: OSM_ATTRIBUTION,
+      // CORS, so the service worker can keep a copy that works offline.
+      crossOrigin: "anonymous",
     }).addTo(map);
-    tiles.once("fallback", () => map.attributionControl.addAttribution(OSM_ATTRIBUTION));
-
-    // Follows every mode change, including the time-based one flipping at 18:00.
-    new MutationObserver(() => {
-      const style = styleForMode();
-      if (tiles.options.style === style) return;
-      tiles.options.style = style;
-      tiles.redraw();
-    }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-mode"] });
 
     windLayer = L.layerGroup();
     regionLayer = L.layerGroup().addTo(map);

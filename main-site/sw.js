@@ -1,7 +1,7 @@
 // Bump on every deploy that changes anything this worker serves. The browser
 // compares this file byte for byte, so an unchanged VERSION means no update
 // reaches anybody and the update bar never appears.
-const VERSION = "v2";
+const VERSION = "v5";
 const CACHE = `sgpsi-${VERSION}`;
 
 // Kept across versions, so an update doesn't throw away what makes the site work
@@ -48,9 +48,7 @@ const DATA_PATHS = ["/api/now", "/api/history"];
 // Cached on first use so the Jua font still renders offline.
 const FONT_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
 
-const isTile = (url) =>
-  (url.hostname === "www.onemap.gov.sg" && (url.pathname.startsWith("/maps/tiles/") || url.pathname.startsWith("/web-assets/"))) ||
-  url.hostname === "tile.openstreetmap.org";
+const isTile = (url) => url.hostname === "tile.openstreetmap.org";
 
 self.addEventListener("install", (event) => {
   // No skipWaiting here. A new version downloads, installs, and then waits.

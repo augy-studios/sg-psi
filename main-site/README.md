@@ -13,7 +13,7 @@ main-site/
 │   ├── update.js                      service worker registration, update bar and offline bar
 │   ├── bands.js                       NEA's PSI and PM2.5 bands, health advice, SGT formatting
 │   ├── charts.js                      the SVG line chart behind Trends and Wind
-│   ├── map.js                         Leaflet on OneMap tiles, falling back to OSM per tile
+│   ├── map.js                         Leaflet on OpenStreetMap tiles
 │   └── alerts.js                      PSI alerts: subscribing to web push
 ├── vendor/leaflet/                    Leaflet 1.9.4, self-hosted so the map works offline
 ├── sw.js                              service worker
@@ -65,10 +65,12 @@ Variables reach only deployments made after they are added, so redeploy afterwar
 1. `/api/now` shows the latest readings, and `/api/push/vapid-key` your public key
    (a `503` names what is missing).
 2. In Settings, Cron Jobs, press **Run** on `/api/cron/collect` and open its logs. The
-   first run backfills the last 7 days of PSI and PM2.5 into Supabase and records the
-   PSI levels for alerts: `"backfilled": {"psi": [...dates], ...}, "alerts": {"first": true}`.
-   Later runs store the newest reading; backfill runs again at the top of each hour
-   for any day still missing hours.
+   first run records the PSI levels for alerts (`"alerts": {"first": true}`) and starts
+   backfilling the last 7 days of PSI and PM2.5 into Supabase, newest day first:
+   `"backfilled": {"psi": [...dates], "pm25": [...], "left": 12}`. data.gov.sg turns
+   away bursts, so each run fetches a few days, paced, and the quarter hourly runs
+   carry on until `left` reaches 0, within the hour. After that, backfill only patches
+   days that are missing hours.
 3. Trends then draws from Supabase. Wind history has no backfill (data.gov.sg keeps it
    by the minute, dozens of pages a day), so the Wind chart fills in an hour at a time
    from the first run.

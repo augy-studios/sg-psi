@@ -42,14 +42,19 @@ async function fromDataGov(since) {
 
   // A day that fails leaves a gap in the chart rather than failing the whole range.
   const fetchDay = (path, d) =>
-    day(path, d).catch((err) => {
+    day(path, d, { retries: 1 }).catch((err) => {
       console.warn(`history: ${path} for ${d} failed:`, err.message);
       return [];
     });
-  const [psiDays, pm25Days] = await Promise.all([
-    Promise.all(dates.map((d) => fetchDay("psi", d))),
-    Promise.all(dates.map((d) => fetchDay("pm25", d))),
-  ]);
+  // A day at a time, its two feeds together: all sixteen at once is a burst data.gov.sg
+  // answers with 429s.
+  const psiDays = [];
+  const pm25Days = [];
+  for (const d of dates) {
+    const [p, m] = await Promise.all([fetchDay("psi", d), fetchDay("pm25", d)]);
+    psiDays.push(p);
+    pm25Days.push(m);
+  }
 
   const byTime = new Map();
   const at = (t) => byTime.get(t) || byTime.set(t, { t, psi: null, pm25: null }).get(t);
