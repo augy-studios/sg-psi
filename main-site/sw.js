@@ -1,7 +1,7 @@
 // Bump on every deploy that changes anything this worker serves. The browser
 // compares this file byte for byte, so an unchanged VERSION means no update
 // reaches anybody and the update bar never appears.
-const VERSION = "v7";
+const VERSION = "v8";
 const CACHE = `sgpsi-${VERSION}`;
 
 // Kept across versions, so an update doesn't throw away what makes the site work
@@ -39,6 +39,7 @@ const ASSETS = [
   "/SGPSI-192.png",
   "/SGPSI-512.png",
   "/SGPSI-main.png",
+  "/SGPSI-badge.png",
 ];
 const SHELL = new Set(ASSETS);
 
@@ -104,6 +105,9 @@ self.addEventListener("push", (event) => {
       tag: "psi-alert",
       renotify: true,
       icon: "/SGPSI-192.png",
+      // The status bar's icon. Android draws only its shape, so this is the wind
+      // mark on a transparent background rather than the app icon's solid square.
+      badge: "/SGPSI-badge.png",
       data: { url: data.url || "/" },
     })
   );
