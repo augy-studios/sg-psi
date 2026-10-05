@@ -1,14 +1,14 @@
 {
-    "name": "SG Weather by UwU Apps",
-    "short_name": "SG Weather",
-    "description": "A simple sgweather app; view live sgweather at a glance!",
+    "name": "SG PSI by UwU Apps",
+    "short_name": "SG PSI",
+    "description": "A simple sgpsi app; view live sgpsi at a glance!",
     "icons": [{
-            "src": "SGW-192.png",
+            "src": "SGPSI-192.png",
             "type": "image/png",
             "sizes": "192x192"
         },
         {
-            "src": "SGW-512.png",
+            "src": "SGPSI-512.png",
             "type": "image/png",
             "sizes": "512x512"
         }
@@ -32,7 +32,7 @@
     "display": "standalone",
     "display_override": ["fullscreen", "minimal-ui", "window-controls-overlay"],
     "orientation": "any",
-    "id": "sgweather",
+    "id": "sgpsi",
     "dir": "ltr",
     "scope": "/",
     "lang": "en",

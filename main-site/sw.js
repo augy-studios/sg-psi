@@ -1,12 +1,12 @@
-const CACHE = "sgweather-v1";
+const CACHE = "sgpsi-v1";
 
 const ASSETS = [
   "/",
   "/index.html",
   "/style.css",
   "/script.js",
-  "/SGW-192.png",
-  "/SGW-512.png",
+  "/SGPSI-192.png",
+  "/SGPSI-512.png",
   "/favicon.ico",
   "/manifest.json"
 ];
