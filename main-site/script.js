@@ -28,6 +28,7 @@
   let trendRange = "24h";
   let trendMetric = "psi";
   let trendTable = false;
+  let windTable = false;
 
   // ---------- theme ----------
 
@@ -231,6 +232,12 @@
       $("#trendTableBtn").setAttribute("aria-pressed", String(trendTable));
       $("#trendTableBtn").classList.toggle("active", trendTable);
       renderTrends();
+    });
+    $("#windTableBtn").addEventListener("click", () => {
+      windTable = !windTable;
+      $("#windTableBtn").setAttribute("aria-pressed", String(windTable));
+      $("#windTableBtn").classList.toggle("active", windTable);
+      renderWindChart();
     });
 
     $("#refreshBtn").addEventListener("click", () => {
@@ -575,16 +582,36 @@
         ? "Couldn't load the wind history. Check your connection, then tap refresh."
         : "Wind history builds up an hour at a time once the site starts collecting it. Check back later.";
       clearChart("windChart");
+      $("#windTable").hidden = true;
       return;
     }
     const strongest = wind.reduce((a, w) => (w.mean > a.mean ? w : a));
     $("#windSummary").textContent = `Windiest hour: ${strongest.mean} knots on average, ${P.sgWhen(strongest.t)}.`;
+
+    $("#windChart").hidden = windTable;
+    $("#windTable").hidden = !windTable;
+    if (windTable) {
+      // Laid out like the Trends table: newest first, with a row wherever hours are missing.
+      const times = wind.map((w) => Date.parse(w.t));
+      const rows = [];
+      for (let i = wind.length - 1; i >= 0; i--) {
+        rows.push(`<tr><th scope="row">${esc(P.sgWhen(times[i]))}</th><td>${num(wind[i].mean)}</td><td>${num(wind[i].max)}</td></tr>`);
+        if (i > 0 && times[i] - times[i - 1] > TABLE_GAP_MS) {
+          rows.push(`<tr class="gap"><td colspan="3">No readings from ${esc(P.sgWhen(times[i - 1] + HOUR_MS))} to ${esc(P.sgWhen(times[i] - HOUR_MS))}</td></tr>`);
+        }
+      }
+      $("#windTable").innerHTML =
+        `<table class="data-table"><thead><tr><th scope="col">Time</th><th scope="col">Average, kn</th><th scope="col">Strongest station, kn</th></tr></thead>` +
+        `<tbody>${rows.join("")}</tbody></table>`;
+      return;
+    }
+
     drawChart("windChart", {
       times: wind.map((w) => Date.parse(w.t)),
       series: [{ id: "mean", label: "Average", color: "var(--series-1)", values: wind.map((w) => w.mean) }],
       format: (v) => `${v} kn (${P.knotsToKmh(v)} km/h)`,
       guides: [],
-      label: "Average wind speed across Singapore's stations, last 24 hours, in knots.",
+      label: "Average wind speed across Singapore's stations, last 24 hours, in knots. Use the left and right arrow keys to read each hour, or the Table button for every value.",
       tickLabel: (t) => P.sgTime(t),
       tipTime: (t) => P.sgWhen(t),
     });

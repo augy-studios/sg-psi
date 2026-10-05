@@ -226,10 +226,14 @@
             <article class="card glass">
                 <div class="card-header">
                     <h2 class="card-title">Average wind speed, last 24 hours</h2>
+                    <button type="button" class="toggle-btn" id="windTableBtn" aria-pressed="false">
+                        <span data-icon="table"></span>Table
+                    </button>
                 </div>
                 <div class="card-body">
                     <p class="muted" id="windSummary">Loading.</p>
                     <div id="windChart"></div>
+                    <div class="table-wrap" id="windTable" hidden></div>
                 </div>
             </article>
             <article class="card glass">
