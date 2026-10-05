@@ -1,12 +1,12 @@
-const CACHE = "template-offline-v1";
+const CACHE = "sgweather-v1";
 
 const ASSETS = [
   "/",
   "/index.html",
   "/style.css",
   "/script.js",
-  "/templateicon1-192.png",
-  "/templateicon1-512.png",
+  "/SGW-192.png",
+  "/SGW-512.png",
   "/favicon.ico",
   "/manifest.json"
 ];
