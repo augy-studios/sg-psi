@@ -14,6 +14,8 @@ import { AREAS } from "./validate.js";
 // A push the device can't receive within this long is dropped: a PSI from hours ago
 // shown as news is worse than none, and the next reading is an hour away anyway.
 const PUSH_TTL = 2 * 3600;
+// A test that turns up long after the button was pressed only confuses.
+const TEST_TTL = 5 * 60;
 // Sends in flight at once, so a long device list doesn't open thousands of connections.
 const SEND_BATCH = 50;
 
@@ -68,7 +70,7 @@ export async function notifyPsi(item) {
   const changed = AREAS.filter((a) => Number.isInteger(prev.levels[a]) && Number.isInteger(levels[a]) && prev.levels[a] !== levels[a]);
   if (!changed.length) return { changed: false };
 
-  webpush.setVapidDetails(process.env.VAPID_SUBJECT, process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
+  useVapid();
 
   const payloads = {};
   const sends = [];
@@ -99,9 +101,27 @@ export async function notifyPsi(item) {
   return { changed: changed, sent, dropped };
 }
 
-async function send(id, device, payload) {
+// One push to one device, through the same keys, payload shape and service worker
+// handler as a real alert, so it proves the whole path. "sent", "dropped" or "failed".
+export async function notifyTest(id, device) {
+  useVapid();
+  const band = PSI_BANDS[levelOf(device.level)].label.toLowerCase();
+  const payload = JSON.stringify({
+    type: "psi-alert",
+    title: "Test alert from SG PSI",
+    body: `Alerts work on this device. You'll hear when the 24-hour PSI ${areaText(device.area)} reaches ${band}.`,
+    url: "/",
+  });
+  return send(id, device, payload, { TTL: TEST_TTL, urgency: "high" });
+}
+
+function useVapid() {
+  webpush.setVapidDetails(process.env.VAPID_SUBJECT, process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
+}
+
+async function send(id, device, payload, options = { TTL: PUSH_TTL, urgency: "normal" }) {
   try {
-    await webpush.sendNotification(device.subscription, payload, { TTL: PUSH_TTL, urgency: "normal" });
+    await webpush.sendNotification(device.subscription, payload, options);
     return "sent";
   } catch (err) {
     // 404 and 410 mean the subscription is gone for good: permission revoked, app

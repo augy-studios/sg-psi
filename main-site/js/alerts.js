@@ -75,13 +75,18 @@
     const toggle = $("#alertsToggle");
     toggle.textContent = p.on ? "Turn alerts off" : "Turn alerts on";
     toggle.classList.toggle("secondary", p.on);
-    $("#alertsNote").textContent = problem ? PROBLEMS[problem] : noteFor(p);
-    $("#alertsNote").dataset.tone = problem ? "bad" : "";
+    $("#alertsTest").hidden = !p.on;
+    note(problem ? PROBLEMS[problem] : noteFor(p), problem ? "bad" : "");
 
     const icon = $("#alertsBtn [data-icon]");
     icon.setAttribute("data-icon", p.on ? "bell-on" : "bell");
     $("#alertsBtn").setAttribute("aria-label", p.on ? "PSI alerts, on" : "PSI alerts");
     window.UwuUI.hydrateIcons($("#alertsBtn"));
+  }
+
+  function note(text, tone) {
+    $("#alertsNote").textContent = text;
+    $("#alertsNote").dataset.tone = tone;
   }
 
   // navigator.serviceWorker.ready never settles if registration failed, so it gets a
@@ -168,6 +173,40 @@
     }
   }
 
+  const postTest = () => fetch(`${API_BASE}/devices/${deviceId()}`, { method: "POST" });
+
+  // Has the server push to this device the way a real alert comes, so a missing key, a
+  // dead subscription or muted notifications show up now, not at the next band change.
+  async function test() {
+    if (busy) return;
+    busy = true;
+    $("#alertsTest").disabled = true;
+    try {
+      let res = await postTest();
+      // The server doesn't know this device, or its subscription has died: sign up
+      // again, with a fresh subscription if it died, and try once more.
+      if (res.status === 404 || res.status === 410) {
+        if (res.status === 410) await (await (await readyRegistration()).pushManager.getSubscription())?.unsubscribe();
+        await subscribe(prefs());
+        res = await postTest();
+      }
+      if (res.ok) {
+        note("Test alert sent. Nothing within a minute? Check that notifications from this browser aren't muted or held back by Do Not Disturb.", "");
+      } else if (res.status === 429) {
+        note("A test alert was just sent. Try again in a few seconds.", "");
+      } else {
+        const { error } = await res.json().catch(() => ({}));
+        note(`Couldn't send a test alert: ${error || `the server replied ${res.status}`}.`, "bad");
+      }
+    } catch (err) {
+      console.warn("test alert failed:", err);
+      note(PROBLEMS.failed, "bad");
+    } finally {
+      busy = false;
+      $("#alertsTest").disabled = false;
+    }
+  }
+
   // Re-sends the choice on every load, which also refreshes the subscription. A
   // permission revoked in the browser's settings turns alerts off here too.
   function resync() {
@@ -204,6 +243,7 @@
       }
     });
     $("#alertsToggle").addEventListener("click", () => apply({ on: !prefs().on }));
+    $("#alertsTest").addEventListener("click", test);
 
     show(prefs());
     resync();

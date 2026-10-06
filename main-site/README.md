@@ -22,7 +22,7 @@ main-site/
 │   ├── history.js                     last 24 hours or 7 days, for the charts
 │   ├── cron/collect.js                every 5 minutes: store readings, send alerts
 │   ├── push/vapid-key.js              public VAPID key for subscribing
-│   ├── push/devices/[id].js           turn a device's alerts on, change them, or off
+│   ├── push/devices/[id].js           turn a device's alerts on, change them, off, or test them
 │   ├── _lib/                          data.gov.sg, Supabase, PSI bands
 │   └── _push/                         Upstash store, validation, the alert rules
 └── .env.example                       every environment variable, explained
@@ -77,7 +77,9 @@ Variables reach only deployments made after they are added, so redeploy afterwar
    Newest first, so the Wind chart's last 24 hours fill within about 3 hours.
 4. On a phone, open the alerts bell, pick an area and a level, and turn alerts on. An
    alert comes when that area's 24-hour PSI next changes band at or above the level.
-   On iPhone and iPad, only from the site added to the Home Screen.
+   On iPhone and iPad, only from the site added to the Home Screen. **Send test alert**
+   pushes one straight away, by the same path: if it errors, the note names what is
+   missing; if it says sent but nothing shows, the phone is holding notifications back.
 
 ## How alerts decide
 

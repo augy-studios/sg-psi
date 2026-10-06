@@ -1,12 +1,15 @@
 // Turn PSI alerts on for a device or change its area and level (PUT, sent again on every
-// page load, which also keeps the subscription fresh), or off (DELETE: the device is
-// forgotten).
+// page load, which also keeps the subscription fresh), off (DELETE: the device is
+// forgotten), or send it a test alert (POST).
 
-import { devices, rateLimited, storeConfigured } from "../../_push/store.js";
+import { notifyTest, pushConfigured } from "../../_push/notify.js";
+import { devices, rateLimited, releaseLock, storeConfigured, takeLock } from "../../_push/store.js";
 import { ValidationError, isId, parseDevice } from "../../_push/validate.js";
 
 const MAX_DEVICES = 50_000;
 const RATE_LIMIT = 60; // requests per IP per minute
+// Between test alerts to one device.
+const TEST_GAP_SECONDS = 15;
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
@@ -35,7 +38,22 @@ export default async function handler(req, res) {
       return res.status(204).end();
     }
 
-    res.setHeader("Allow", "PUT, DELETE");
+    // Only the device itself knows its id, so a test can only reach the one asking.
+    if (req.method === "POST") {
+      if (!pushConfigured()) return res.status(503).json({ error: "PSI alerts are not set up: VAPID keys missing" });
+      const device = await devices.get(id);
+      if (!device) return res.status(404).json({ error: "device not signed up" });
+      if (!(await takeLock(`test:${id}`, TEST_GAP_SECONDS))) return res.status(429).json({ error: "a test was just sent" });
+
+      const result = await notifyTest(id, device);
+      if (result === "sent") return res.status(200).json({ sent: true });
+      // Only a test that arrived counts against the gap: the page signs up again and retries.
+      await releaseLock(`test:${id}`).catch(() => {});
+      if (result === "dropped") return res.status(410).json({ error: "subscription expired" });
+      return res.status(502).json({ error: "the push service turned it away" });
+    }
+
+    res.setHeader("Allow", "PUT, DELETE, POST");
     return res.status(405).json({ error: "method not allowed" });
   } catch (err) {
     if (err instanceof ValidationError) return res.status(400).json({ error: err.message });

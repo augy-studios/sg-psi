@@ -36,6 +36,9 @@ export const devices = {
   async has(id) {
     return (await redis("HEXISTS", DEVICES, id)) === 1;
   },
+  async get(id) {
+    return parse(await redis("HGET", DEVICES, id));
+  },
   async set(id, device) {
     await redis("HSET", DEVICES, id, JSON.stringify(device));
   },
