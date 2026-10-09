@@ -59,24 +59,31 @@
       const width = frame.clientWidth;
       if (!width) return;
       state.width = width;
-      const height = width < 480 ? 220 : 260;
+      const { times, series } = opts;
+      const t0 = times[0];
+      const t1 = times[times.length - 1];
+      const { ticks, daily } = timeTicks(t0, t1);
+
+      // Day labels ("Mon 5 Oct") are too wide to sit side by side on a phone, so over a
+      // week they're tilted, with the room they need added below rather than taken from
+      // the plot.
+      const bottom = daily ? M.bottom + 30 : M.bottom;
+      const height = (width < 480 ? 220 : 260) + bottom - M.bottom;
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
       svg.setAttribute("height", height);
       svg.innerHTML = "";
 
-      const { times, series } = opts;
-      const t0 = times[0];
-      const t1 = times[times.length - 1];
       const values = series.flatMap((s) => s.values).filter(Number.isFinite);
       const peak = Math.max(1, ...values);
       const step = niceStep(peak * 1.1, 4);
       const yMax = Math.ceil((peak * 1.1) / step) * step;
 
       const x = (t) => M.left + (t1 === t0 ? 0.5 : (t - t0) / (t1 - t0)) * (width - M.left - M.right);
-      const y = (v) => M.top + (1 - v / yMax) * (height - M.top - M.bottom);
+      const y = (v) => M.top + (1 - v / yMax) * (height - M.top - bottom);
       state.x = x;
       state.y = y;
       state.height = height;
+      state.bottom = bottom;
 
       // Grid and y ticks: hairlines, recessive.
       const grid = el("g", { class: "chart-grid" }, svg);
@@ -92,9 +99,10 @@
         el("line", { x1: M.left, x2: width - M.right, y1: y(g.value), y2: y(g.value), class: "chart-guide" }, grid);
       }
 
-      const { ticks, daily } = timeTicks(t0, t1);
       for (const t of ticks) {
-        const label = el("text", { x: x(t), y: height - 8, "text-anchor": "middle", class: "chart-tick" }, grid);
+        const label = daily
+          ? el("text", { x: x(t), y: height - bottom + 14, "text-anchor": "end", transform: `rotate(-40 ${x(t)} ${height - bottom + 14})`, class: "chart-tick" }, grid)
+          : el("text", { x: x(t), y: height - 8, "text-anchor": "middle", class: "chart-tick" }, grid);
         label.textContent = opts.tickLabel(t, daily);
       }
 
@@ -140,7 +148,7 @@
       const g = state.cross;
       g.innerHTML = "";
       const cx = state.x(times[i]);
-      el("line", { x1: cx, x2: cx, y1: M.top, y2: state.height - M.bottom, class: "chart-crossline" }, g);
+      el("line", { x1: cx, x2: cx, y1: M.top, y2: state.height - state.bottom, class: "chart-crossline" }, g);
       for (const s of series) {
         const v = s.values[i];
         if (Number.isFinite(v)) el("circle", { cx, cy: state.y(v), r: 4, class: "chart-dot", style: `fill:${s.color}` }, g);
