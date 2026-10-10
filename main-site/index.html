@@ -42,7 +42,8 @@
 
     <meta charset="utf-8">
     <title>SG PSI | UwU Apps</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- viewport-fit=cover, so the tray's safe-area insets are real on notched phones. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description" content="Singapore's air quality at a glance: live PSI, PM2.5 and wind across the island.">
 
     <meta property="og:type" content="website">
@@ -67,6 +68,21 @@
 </head>
 
 <body>
+    <!-- Prevent tray flash: put the tray and the column in their saved state before
+         paint, so a visitor who left it shut doesn't watch it slide shut. Here rather
+         than in <head> because the column's padding keys off <body>. Keep the key in
+         sync with TRAY_KEY in script.js. -->
+    <script>
+        (function () {
+            var open = true;
+            try {
+                open = localStorage.getItem('sgpsi.trayOpen') !== '0';
+            } catch (e) {}
+            if (open) document.body.classList.add('tray-open');
+            else document.documentElement.classList.add('tray-start-collapsed');
+        })();
+    </script>
+
     <!-- The nav, wordrain-game's floating tray: the views, then alerts and theme,
          as glass buttons top right. Slides off the right edge, leaving the arrow tab. -->
     <div class="hud-right">

@@ -147,6 +147,12 @@ h1, h2, h3 { font-weight: normal; }
   --hud-edge: max(16px, calc(env(safe-area-inset-right) + 16px));
   --hud-edge-left: max(16px, calc(env(safe-area-inset-left) + 16px));
   --glass-btn: 44px;
+  /* One pace for the tray, its buttons, its tab and the page making room. */
+  --tray-time: 0.34s;
+  --tray-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* The column's side padding. The brand line's nudge past the collapsed tab
+     is worked out from it. */
+  --column-pad: 14px;
 }
 
 /* flat, static colour derived from theme, no gradients */
@@ -415,7 +421,7 @@ body.modal-open { overflow: hidden; }
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform var(--tray-time) var(--tray-ease);
 }
 .tray.collapsed { transform: translateX(var(--tray-shift)); }
 
@@ -432,13 +438,13 @@ body.modal-open { overflow: hidden; }
   border: 1px solid var(--surface-border);
   box-shadow: var(--shadow);
   color: var(--ink);
-  transition: border-radius 0.22s ease;
+  transition: border-radius var(--tray-time) var(--tray-ease);
 }
 .tray-tab > [data-icon] { display: inline-flex; }
 .tray-tab svg {
   width: 16px;
   height: 16px;
-  transition: transform 0.22s ease;
+  transition: transform var(--tray-time) var(--tray-ease);
 }
 /* At the edge it is a tab, flat on the side the screen cuts off. */
 .tray.collapsed .tray-tab { border-radius: 12px 0 0 12px; border-right: none; }
@@ -451,11 +457,7 @@ body.modal-open { overflow: hidden; }
   align-items: center;
   gap: 8px;
 }
-.tray-buttons {
-  margin-right: var(--hud-edge);
-  transition: opacity 0.22s ease;
-}
-.tray.collapsed .tray-buttons { opacity: 0; }
+.tray-buttons { margin-right: var(--hud-edge); }
 
 /* Between the views and the two settings buttons. */
 .tray-rule {
@@ -465,20 +467,71 @@ body.modal-open { overflow: hidden; }
   background: color-mix(in srgb, var(--ink) 25%, transparent);
 }
 
+/* The buttons unroll: each fades in, slides back from the edge and grows, 18 ms
+   after the one above it. They move by `translate` and `scale`, leaving
+   `transform` to the hover lift, so the list repeats .glass-btn's transitions.
+   The views' <nav> is one child here and moves as one step. */
+.tray-buttons > * {
+  transition:
+    opacity calc(var(--tray-time) * 0.8) ease,
+    translate var(--tray-time) var(--tray-ease),
+    scale var(--tray-time) var(--tray-ease),
+    transform 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+  /* Only opening is staggered: the delay comes from the state being entered. */
+  transition-delay: calc(var(--i, 0) * 18ms), calc(var(--i, 0) * 18ms), calc(var(--i, 0) * 18ms), 0s, 0s, 0s;
+}
+/* Views, rule, alerts, theme. Add a line for each item the tray gains. */
+.tray-buttons > :nth-child(2) { --i: 1; }
+.tray-buttons > :nth-child(3) { --i: 2; }
+.tray-buttons > :nth-child(4) { --i: 3; }
+.tray-buttons > :nth-child(5) { --i: 4; }
+.tray.collapsed .tray-buttons > * {
+  opacity: 0;
+  translate: 12px 0; /* towards the edge it leaves by */
+  scale: 0.85;
+  transition-delay: 0s; /* collapsing, they all go at once */
+}
+
+/* A returning visitor who left the tray shut gets it shut from the first paint,
+   with nothing sliding. The inline script at the top of <body> sets the class and
+   script.js lifts it once the real state is on. */
+.tray-start-collapsed .tray { transform: translateX(var(--tray-shift)); transition: none; }
+.tray-start-collapsed .tray-buttons > * { opacity: 0; translate: 12px 0; scale: 0.85; transition: none; }
+.tray-start-collapsed .tray-tab { border-radius: 12px 0 0 12px; border-right: none; }
+.tray-start-collapsed .tray-tab svg { transform: rotate(180deg); }
+/* Also set for a moment while the view changes, so the column's padding only
+   ever moves with the tray. */
+.tray-start-collapsed main.container,
+.tray-start-collapsed .brand,
+.layout-still main.container,
+.layout-still .brand { transition: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tray-buttons > * { transition-delay: 0s !important; }
+}
+
 /* ---- layout ---- */
 .container {
   max-width: 720px;
   margin: 0 auto;
-  padding: 14px;
+  padding: var(--column-pad);
   padding-bottom: 48px;
 }
 
-/* Where the column would run under the open tray, it makes room for it; the
-   arrow tab alone only needs the brand line kept clear. */
+/* Where the column would run under the open tray, it makes room for it, and
+   only while it is open. Collapsed, the column takes the full width and the tab
+   floats over its edge; only the brand line, level with the tab, steps in to
+   clear it (24px) by 10px. Both sides animate, in step with the tray. */
+main.container,
+.brand {
+  transition: padding-right var(--tray-time) var(--tray-ease),
+              padding-left var(--tray-time) var(--tray-ease);
+}
 @media (max-width: 920px) {
   body.tray-open main.container { padding-right: calc(var(--glass-btn) + var(--hud-edge) + 12px); }
-  body.tray-open .brand { padding-right: 34px; }
-  body:not(.tray-open) .brand { padding-right: 34px; }
+  body:not(.tray-open) .brand { padding-right: calc(24px + 10px - var(--column-pad)); }
 }
 
 .view:not([hidden]) { animation: view-in 0.2s ease; }
@@ -1088,8 +1141,9 @@ body.view-map .status {
     --glass-btn: 40px;
     --hud-edge: max(10px, calc(env(safe-area-inset-right) + 10px));
     --hud-edge-left: max(10px, calc(env(safe-area-inset-left) + 10px));
+    --column-pad: 10px;
   }
-  .container { padding: 10px; padding-bottom: 40px; }
+  .container { padding-bottom: 40px; }
   .update-notice-inner { flex-wrap: wrap; padding-left: 10px; padding-right: 10px; gap: 0.5rem; }
   .update-notice p { flex-basis: 100%; }
   .swatch-grid { grid-template-columns: 1fr; }

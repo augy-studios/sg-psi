@@ -125,8 +125,14 @@
       $(`#view-${v}`).hidden = !on;
     }
     if (focus) $(`#tab-${name}`).focus();
-    // The Map view fills the screen; style.css keys that off this class.
+    // The Map view fills the screen; style.css keys that off this class. The
+    // column's padding moves with the tray, not with the view, so it is held
+    // still while the class changes and the new layout is applied.
+    const root = document.documentElement;
+    root.classList.add("layout-still");
     for (const v of VIEWS) document.body.classList.toggle(`view-${v}`, v === name);
+    void root.offsetWidth;
+    root.classList.remove("layout-still");
     if (name !== "map") window.scrollTo({ top: 0 });
 
     // The address stays plain. A hash only ever arrives from outside (the manifest's
@@ -169,6 +175,9 @@
       // Open, the default.
     }
     setTray(open, { save: false });
+    // The inline script in index.html held a shut tray still for first paint.
+    // Lifted a frame later, so from here on toggles animate.
+    requestAnimationFrame(() => document.documentElement.classList.remove("tray-start-collapsed"));
     $("#trayTab").addEventListener("click", () => setTray($("#tray").classList.contains("collapsed")));
   }
 
