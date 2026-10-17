@@ -1,8 +1,8 @@
 [{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
         "namespace": "android_app",
         "package_name": "org.uwuapps.sgpsi",
-        "sha256_cert_fingerprints": ["E4:EB:13:B6:CA:2A:9E:89:E4:8B:3C:AB:68:2B:BF:6A:99:97:09:A5:2A:9A:36:20:8C:8C:A9:94:9B:08:CB:51"]
-      }
-    }]
+        "sha256_cert_fingerprints": ["1B:21:68:C5:DB:77:98:D9:3E:24:99:C5:19:EE:62:BA:94:56:D1:F1:29:02:83:06:2C:8F:3B:33:35:87:2A:EC"]
+    }
+}]
