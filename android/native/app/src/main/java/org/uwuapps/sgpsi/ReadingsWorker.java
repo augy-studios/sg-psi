@@ -56,7 +56,8 @@ public class ReadingsWorker extends Worker {
     }
 
     static boolean needed(Context context) {
-        return PsiWidget.allIds(context).length > 0 || PsiIconWidget.allIds(context).length > 0
+        return PsiWidget.allIds(context).length > 0 || Pm25Widget.allIds(context).length > 0
+                || WindWidget.allIds(context).length > 0 || PsiIconWidget.allIds(context).length > 0
                 || PsiTile.added(context) || Follow.on(context) || LiveIcon.on(context);
     }
 

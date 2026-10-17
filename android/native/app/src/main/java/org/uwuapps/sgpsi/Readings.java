@@ -1,11 +1,12 @@
 /*
  * The latest readings, kept on the phone for what shows them with the app closed: the home
- * screen widget (PsiWidget), the Quick Settings tile (PsiTile) and "Where I am" (Follow).
+ * screen widgets (Glance), the Quick Settings tile (PsiTile), the launcher icon (LiveIcon) and
+ * "Where I am" (Follow).
  *
- * Fetched from the site's /api/now (main-site/api/now.js) by ReadingsWorker, the widget's
- * refresh button and the tile, and handed over by the page whenever it loads them itself
- * (SgPsiPlugin.readings), so an open app keeps them fresh for free. Only the two figures
- * shown are kept: each region's 24-hour PSI and 1-hour PM2.5, and when they're for.
+ * Fetched from the site's /api/now (main-site/api/now.js) by ReadingsWorker, the widgets'
+ * refresh buttons and the tile, and handed over by the page whenever it loads them itself
+ * (SgPsiPlugin.readings), so an open app keeps them fresh for free. Only what's shown is
+ * kept: each region's 24-hour PSI and 1-hour PM2.5, the wind's summary, and when they're for.
  *
  * The bands are NEA's, the same as main-site/js/bands.js: keep them in step.
  */
@@ -15,6 +16,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -88,11 +90,66 @@ final class Readings {
                 out.put("pm25Time", pm25.optString("time", ""));
                 out.put("pm25", regions(pm25.optJSONObject("regions")));
             }
+            JSONObject wind = wind(now.optJSONObject("wind"));
+            if (wind != null) out.put("wind", wind);
             prefs(context).edit().putString(KEY, out.toString()).apply();
             return true;
         } catch (JSONException e) {
             return false;
         }
+    }
+
+    // The wind as the Wind page's tiles show it (main-site/script.js, renderWind): the average
+    // speed in knots, the strongest station, and where most of the air is coming from, as the
+    // average of every station's wind as a vector, so a few still stations pointing anywhere
+    // don't drag it about. { time, mean, strongest, strongestAt, from }, from -1 when calm.
+    private static JSONObject wind(JSONObject wind) throws JSONException {
+        JSONArray stations = wind == null ? null : wind.optJSONArray("stations");
+        if (stations == null || stations.length() == 0) return null;
+        double sum = 0;
+        double x = 0;
+        double y = 0;
+        double strongest = -1;
+        String strongestAt = "";
+        int n = 0;
+        for (int i = 0; i < stations.length(); i++) {
+            JSONObject s = stations.optJSONObject(i);
+            if (s == null || !s.has("speed") || !s.has("direction")) continue;
+            double speed = s.optDouble("speed");
+            double rad = Math.toRadians(s.optDouble("direction"));
+            sum += speed;
+            x += speed * Math.sin(rad);
+            y += speed * Math.cos(rad);
+            if (speed > strongest) {
+                strongest = speed;
+                strongestAt = s.optString("name", "");
+            }
+            n++;
+        }
+        if (n == 0) return null;
+        JSONObject out = new JSONObject();
+        out.put("time", wind.optString("time", ""));
+        out.put("mean", Math.round(sum / n * 10) / 10.0);
+        out.put("strongest", strongest);
+        out.put("strongestAt", strongestAt);
+        out.put("from", Math.hypot(x, y) < 0.5 ? -1 : (Math.toDegrees(Math.atan2(x, y)) + 360) % 360);
+        return out;
+    }
+
+    private static final String[] COMPASS = {"N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};
+
+    // A direction the wind comes from as a 16-point compass name, as main-site/js/bands.js has it.
+    static String compass(double deg) {
+        return COMPASS[(int) Math.round((((deg % 360) + 360) % 360) / 22.5) % 16];
+    }
+
+    static long knotsToKmh(double knots) {
+        return Math.round(knots * 1.852);
+    }
+
+    // "6.2", or "6" for a whole number of knots.
+    static String knots(double knots) {
+        return knots == Math.rint(knots) ? String.valueOf((long) knots) : String.valueOf(knots);
     }
 
     private static JSONObject regions(JSONObject from) throws JSONException {
@@ -235,6 +292,15 @@ final class Readings {
 
     // "3pm", in Singapore time, for when a reading is from.
     static String hour(String iso) {
+        return format(iso, "ha");
+    }
+
+    // "3:05pm", for the wind, which is read every minute.
+    static String minute(String iso) {
+        return format(iso, "h:mma");
+    }
+
+    private static String format(String iso, String pattern) {
         if (iso == null || iso.length() < 19) return "";
         try {
             // data.gov.sg's stamps end +08:00, Supabase's +00:00, and either may say Z. The
@@ -248,7 +314,7 @@ final class Readings {
                 long minutes = Integer.parseInt(zone.substring(1, 3)) * 60L + Integer.parseInt(zone.substring(4, 6));
                 ms -= (zone.charAt(0) == '-' ? -1 : 1) * minutes * 60_000L;
             }
-            SimpleDateFormat out = new SimpleDateFormat("ha", Locale.UK);
+            SimpleDateFormat out = new SimpleDateFormat(pattern, Locale.UK);
             out.setTimeZone(TimeZone.getTimeZone("Asia/Singapore"));
             return out.format(new Date(ms)).toLowerCase(Locale.ROOT);
         } catch (Exception e) {

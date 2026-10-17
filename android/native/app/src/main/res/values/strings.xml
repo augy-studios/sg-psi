@@ -5,18 +5,47 @@
     <string name="package_name">org.uwuapps.sgpsi</string>
     <string name="custom_url_scheme">org.uwuapps.sgpsi</string>
 
-    <!-- The home screen widget (PsiWidget.java) -->
+    <!-- The launcher shortcuts (xml/shortcuts.xml): short labels up to 10 characters, long up
+         to 25 -->
+    <string name="shortcut_map">Map</string>
+    <string name="shortcut_map_long">PSI and wind on the map</string>
+    <string name="shortcut_trends">Trends</string>
+    <string name="shortcut_trends_long">Last 24 hours and 7 days</string>
+    <string name="shortcut_pollutants">Pollutants</string>
+    <string name="shortcut_pollutants_long">What makes up the PSI</string>
+    <string name="shortcut_wind">Wind</string>
+    <string name="shortcut_wind_long">Wind at every station</string>
+    <string name="shortcut_overview">Overview</string>
+    <string name="shortcut_overview_long">PSI and PM2.5 by region</string>
+
+    <!-- The region widgets (RegionWidget.java, WidgetConfigActivity.java) -->
     <string name="widget_name">SG PSI</string>
-    <string name="widget_description">The 24-hour PSI and its band across Singapore and in each region, with the 1-hour PM2.5</string>
+    <string name="widget_description">The 24-hour PSI and its band, across Singapore or in a region you pick, with the 1-hour PM2.5 and every region\'s PSI</string>
     <string name="widget_title">24-hour PSI</string>
-    <string name="widget_title_at">24-hour PSI · %1$s</string>
     <string name="widget_pm25">PM2.5 %1$s µg/m³ · %2$s</string>
+    <string name="pm25_widget_name">SG PM2.5</string>
+    <string name="pm25_widget_description">The 1-hour PM2.5 and its band, across Singapore or in a region you pick, with the PSI and every region\'s PM2.5</string>
+    <string name="widget_title_pm25">1-hour PM2.5</string>
+    <string name="widget_psi">PSI %1$s · %2$s</string>
+    <string name="widget_setup_title">Show which region?</string>
+    <string name="widget_setup_singapore">Singapore (the worst region)</string>
+    <string name="widget_setup_here">Where I am</string>
     <string name="widget_here">%1$s (here)</string>
     <string name="widget_loading">Getting the readings…</string>
     <string name="widget_refreshing">Refreshing…</string>
     <string name="widget_refresh">Refresh</string>
     <string name="widget_old">Couldn\'t refresh</string>
     <string name="widget_updated">Updated %1$s</string>
+
+    <!-- The wind widget (WindWidget.java) -->
+    <string name="wind_widget_name">SG wind</string>
+    <string name="wind_widget_description">The average wind speed across Singapore, where it\'s mostly coming from, and the strongest station</string>
+    <string name="wind_title">Wind</string>
+    <string name="wind_title_at">Wind · %1$s</string>
+    <string name="wind_kmh">%1$d km/h</string>
+    <string name="wind_from">from %1$s</string>
+    <string name="wind_calm">Calm</string>
+    <string name="wind_strongest">Strongest %1$s kn at %2$s</string>
 
     <!-- The SG PSI icon widget (PsiIconWidget.java) -->
     <string name="icon_widget_name">SG PSI icon</string>

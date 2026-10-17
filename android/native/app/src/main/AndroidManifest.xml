@@ -72,7 +72,8 @@
 
         <!-- The launcher's entry, one per PSI band, each with that band's icon: LiveIcon.java
              enables the one for the worst region's band and disables the rest. Good's is enabled
-             to begin with. Renaming or removing one would leave phones that had it enabled with
+             to begin with. Each carries the shortcuts (xml/shortcuts.xml), as a launcher reads
+             them from the enabled one. Renaming or removing one would leave phones that had it enabled with
              no launcher entry, so keep these names. -->
         <activity-alias
             android:name=".IconGood"
@@ -86,6 +87,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".IconModerate"
@@ -99,6 +101,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".IconUnhealthy"
@@ -112,6 +115,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".IconVeryUnhealthy"
@@ -125,6 +129,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity-alias>
         <activity-alias
             android:name=".IconHazardous"
@@ -138,6 +143,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity-alias>
 
         <!-- The app updating itself, for the site's update bar and the Edge Tray's "Check for
@@ -152,8 +158,9 @@
         <receiver android:name=".UpdateActivity$InstallStatus"
             android:exported="false" />
 
-        <!-- The home screen widget (PsiWidget.java). Exported for the launcher, the only one
-             that sends APPWIDGET_UPDATE; its refresh button is an explicit broadcast. -->
+        <!-- The SG PSI widget (PsiWidget.java, RegionWidget.java). Exported for the launcher, the
+             only one that sends APPWIDGET_UPDATE; its refresh button is an explicit broadcast.
+             Keep the class name: 1.0.0 put it on home screens. -->
         <receiver android:name=".PsiWidget"
             android:label="@string/widget_name"
             android:exported="true">
@@ -163,6 +170,37 @@
             <meta-data android:name="android.appwidget.provider"
                 android:resource="@xml/psi_widget_info" />
         </receiver>
+
+        <!-- The SG PM2.5 and wind widgets (Pm25Widget.java, WindWidget.java). -->
+        <receiver android:name=".Pm25Widget"
+            android:label="@string/pm25_widget_name"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/pm25_widget_info" />
+        </receiver>
+        <receiver android:name=".WindWidget"
+            android:label="@string/wind_widget_name"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/wind_widget_info" />
+        </receiver>
+
+        <!-- Picking the region a region widget shows (WidgetConfigActivity.java), as it's added
+             and from its title. Exported for the launcher, which starts it to set a widget up. -->
+        <activity android:name=".WidgetConfigActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@style/UpdateTheme">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
 
         <!-- The SG PSI icon widget (PsiIconWidget.java): the app icon in the PSI's band. -->
         <receiver android:name=".PsiIconWidget"

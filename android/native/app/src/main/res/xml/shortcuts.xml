@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the app's icon: each of the site's views, through its uwu://sgpsi/ link
+     (MainActivity.pageFor). On every launcher alias (AndroidManifest.xml), as the launcher reads
+     them from whichever is enabled. Most launchers show the first four. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="map"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_map"
+        android:shortcutShortLabel="@string/shortcut_map"
+        android:shortcutLongLabel="@string/shortcut_map_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="uwu://sgpsi/map"
+            android:targetPackage="org.uwuapps.sgpsi"
+            android:targetClass="org.uwuapps.sgpsi.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="trends"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_trends"
+        android:shortcutShortLabel="@string/shortcut_trends"
+        android:shortcutLongLabel="@string/shortcut_trends_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="uwu://sgpsi/trends"
+            android:targetPackage="org.uwuapps.sgpsi"
+            android:targetClass="org.uwuapps.sgpsi.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="pollutants"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_pollutants"
+        android:shortcutShortLabel="@string/shortcut_pollutants"
+        android:shortcutLongLabel="@string/shortcut_pollutants_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="uwu://sgpsi/pollutants"
+            android:targetPackage="org.uwuapps.sgpsi"
+            android:targetClass="org.uwuapps.sgpsi.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="wind"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_wind"
+        android:shortcutShortLabel="@string/shortcut_wind"
+        android:shortcutLongLabel="@string/shortcut_wind_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="uwu://sgpsi/wind"
+            android:targetPackage="org.uwuapps.sgpsi"
+            android:targetClass="org.uwuapps.sgpsi.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="overview"
+        android:enabled="true"
+        android:icon="@drawable/shortcut_overview"
+        android:shortcutShortLabel="@string/shortcut_overview"
+        android:shortcutLongLabel="@string/shortcut_overview_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="uwu://sgpsi/overview"
+            android:targetPackage="org.uwuapps.sgpsi"
+            android:targetClass="org.uwuapps.sgpsi.MainActivity" />
+    </shortcut>
+</shortcuts>

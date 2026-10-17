@@ -2,7 +2,8 @@
  * The SG PSI tile in Quick Settings: the 24-hour PSI and its band, for the region you're in
  * with "Where I am" on (Follow), or else the worst region, as the alerts' "Any region" is. Its
  * icon is the app icon's gauge with the needle on that band, and it's lit up while that's
- * Unhealthy or worse, so a glance at the shade says whether to read it. A tap opens the app.
+ * Unhealthy or worse, so a glance at the shade says whether to read it. A tap opens the app on
+ * the Overview.
  *
  * Drawn from the readings kept on the phone (Readings) each time the shade opens, fetching
  * them first if they're over half an hour old, and refreshed by ReadingsWorker while the tile
@@ -16,6 +17,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Icon;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -142,7 +144,8 @@ public class PsiTile extends TileService {
     @SuppressWarnings("deprecation")
     @SuppressLint("StartActivityAndCollapseDeprecated")
     private void open() {
-        Intent intent = new Intent(this, MainActivity.class)
+        // The Overview, through its uwu://sgpsi/ link (MainActivity.pageFor).
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("uwu://sgpsi/overview"), this, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startActivityAndCollapse(PendingIntent.getActivity(this, 2, intent,

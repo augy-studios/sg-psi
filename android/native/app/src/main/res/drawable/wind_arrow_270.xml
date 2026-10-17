@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The wind widget's arrow (WindWidget), pointing 270 degrees from north: the way the wind
+     blows. The Wind page's station arrow (main-site/script.js). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group android:pivotX="12" android:pivotY="12" android:rotation="270">
+        <path
+            android:fillColor="@color/widget_ink"
+            android:pathData="M12,3 L18,15 H13.5 V21 H10.5 V15 H6 Z" />
+    </group>
+</vector>

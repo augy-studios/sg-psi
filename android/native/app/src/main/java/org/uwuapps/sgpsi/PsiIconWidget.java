@@ -1,20 +1,18 @@
 /*
  * The SG PSI icon widget: one cell on the home screen, the app's icon in the worst region's
  * band (Good to Hazardous, main-site/icons/SGPSI-<state>.svg) with the PSI under it, opening
- * the app. A live icon that every launcher keeps where it was put, unlike the launcher icon's
- * own switching (LiveIcon).
+ * the app on the Overview. A live icon that every launcher keeps where it was put, unlike the
+ * launcher icon's own switching (LiveIcon).
  *
- * Refreshed with the other widget: every half hour while there's one (ReadingsWorker), and
+ * Refreshed with the other widgets: every half hour while there's one (ReadingsWorker), and
  * whenever the app loads the readings itself.
  */
 package org.uwuapps.sgpsi;
 
-import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
 import android.widget.RemoteViews;
 
 import org.json.JSONObject;
@@ -76,10 +74,7 @@ public class PsiIconWidget extends AppWidgetProvider {
                 ? context.getString(R.string.app_name)
                 : context.getString(R.string.icon_widget_spoken, value, Readings.psiLabel(value)));
 
-        Intent open = new Intent(context, MainActivity.class)
-                .setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        views.setOnClickPendingIntent(android.R.id.background, PendingIntent.getActivity(context, 3, open,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+        views.setOnClickPendingIntent(android.R.id.background, MainActivity.page(context, "overview"));
 
         AppWidgetManager.getInstance(context).updateAppWidget(ids, views);
     }

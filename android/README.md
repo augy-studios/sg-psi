@@ -15,13 +15,14 @@ itself from there.
 |---|---|---|
 | **PSI alerts** as notifications. The WebView has no Web Push, so the app signs up with its Firebase Cloud Messaging token instead, and the server sends the same alerts through FCM | Capacitor's PushNotifications plugin, `Notifications` (channels) | `js/alerts.js`, `api/_push/fcm.js`, `api/_push/notify.js` |
 | **Where I am**: an alerts area that follows the region you're in. Every half hour, with the app closed, the phone's rough position (cell towers and wifi) is matched to the nearest of NEA's five regions, and the server is told when it changes. Arriving in a region already at your alert level says so at once | `Follow`, `ReadingsWorker`, `SgPsiPlugin.follow` | `js/alerts.js`, `api/_push/validate.js` (`here`) |
-| **Home screen widget**: the 24-hour PSI across Singapore and its band, the PM2.5, and each region's PSI, band-coloured. Resizable; one row high, it drops the regions. With Where I am on, your region is outlined | `PsiWidget`, `Readings`, `ReadingsWorker`, `res/layout/widget_psi.xml` | `script.js` (`shareWithApp`) |
+| **Home screen widgets** (1.0.1: region choice, PM2.5 and wind). **SG PSI**: the 24-hour PSI and its band, the PM2.5 under it, and each region's PSI, band-coloured. **SG PM2.5**: the same for the 1-hour PM2.5. Each shows Singapore, one region or Where I am, picked as it's added and again from its title (or Android 12's reconfigure); the region shown big is outlined. **SG wind**: the average speed, where it's mostly from with an arrow, and the strongest station. Resizable; one row high, the region widgets drop the regions. Taps open the matching page: the reading's own, the other reading's from the line under it, the Map from a region, Wind from the wind widget | `RegionWidget` (`PsiWidget`, `Pm25Widget`), `WidgetConfigActivity`, `WindWidget`, `Readings`, `ReadingsWorker`, `res/layout/widget_psi.xml`, `widget_wind.xml` | `script.js` (`shareWithApp`) |
 | **Quick Settings tile**: the PSI and band for your region (Where I am) or the worst one, its icon the gauge with the needle on that band, lit up from Unhealthy | `PsiTile`, `res/drawable/tile_*.xml` | none |
 | **The launcher icon follows the PSI**: the gauge's needle and the mascot's face show the worst region's band, Good to Hazardous. On by default, switched off under **App icon** in the theme window. Android can't change an app's icon, so the manifest has five launcher entries (activity aliases), one per band, and only one is enabled; the switch waits until the app is off screen. **Some launchers (Pixel's, Samsung's) take the icon off the home screen at each change**, leaving it in the app drawer | `LiveIcon`, `ReadingsWorker`, the aliases in `AndroidManifest.xml` | `js/app-icon.js` |
 | **SG PSI icon widget**: one cell, the same live icon with the PSI under it, which stays where it's put on every launcher | `PsiIconWidget`, `res/layout/widget_icon.xml` | none |
 | **Morning summary** at 7am, opt-in | `SgPsiPlugin.setTopic` (FCM topic `sgpsi-morning`) | `js/alerts.js`, `api/cron/morning.js` |
 | **Updating itself** from GitHub Releases: a bar at the top of the page when a new version is out, the Edge Tray's download button, "Check for updates", which also checks for a new site version, and an opt-in notification the moment a release is published. All use Android's own installer | `UpdateActivity`, `SgPsiPlugin.setTopic` (`sgpsi-releases`) | `js/app-update.js`, `js/update.js`, `api/app-release.js`, `api/push/release.js` |
-| **The site's own links** (`https://sgpsi.uwuapps.org/...`, verified by `.well-known/assetlinks.json`) and `uwu://sgpsi/` links, such as `uwu://sgpsi/map` | `MainActivity` | none |
+| **App shortcuts** (1.0.1): long-press the app's icon for Map, Trends, Pollutants, Wind and Overview, each with its Edge Tray icon. Most launchers show the first four | `res/xml/shortcuts.xml` (on every icon alias), `res/drawable*/shortcut_*.xml` | none |
+| **The site's own links** (`https://sgpsi.uwuapps.org/...`, verified by `.well-known/assetlinks.json`) and `uwu://sgpsi/` links: `uwu://sgpsi/map`, `/trends`, `/pollutants`, `/wind`, `/overview` open that view; `uwu://sgpsi/` opens the app as it is. The shortcuts, widgets and tile open their pages this way | `MainActivity` (`pageFor`, `page`) | `script.js` (`hashchange`) |
 | **No status bar**, so the page has the whole screen; a swipe down from the top shows it for a moment, its icons following the page's light or dark mode | `MainActivity`, Capacitor's SystemBars | `js/app-bridge.js`, `style.css` (`data-statusbar`, `--safe-*`) |
 
 The website and PWA lose nothing: everything a browser can do stays as it was, and these only
@@ -177,8 +178,15 @@ On a phone with the app installed (with Firebase set up for the first three):
   button there.
 - **Switches**: **Morning summary** and **New versions of the app** under "Also on this phone"
   (`FIREBASE-SETUP.md`, step 7, sends one of each without waiting).
-- **Widget**: long-press the home screen, **Widgets**, **SG PSI**. It shows the readings within
-  a few seconds; the arrow refreshes them. Shrink it to one row and the regions go.
+- **Widgets**: long-press the home screen, **Widgets**, **SG PSI**. It asks which region; pick
+  West, and it shows the West's PSI big with West outlined. Its title asks again. The arrow
+  refreshes it; shrink it to one row and the regions go. Tapping the PSI opens the Overview,
+  the PM2.5 line Trends, a region the Map. **SG PM2.5** the same, opening Trends. **SG wind**
+  shows an arrow the way the wind blows, and opens Wind.
+- **Shortcuts**: long-press the app's icon: Map, Trends, Pollutants and Wind, each with its icon,
+  each opening its view. Also with the launcher icon on another band (they're on every alias).
+- **uwu links**: from another app (a note, a chat), open `uwu://sgpsi/wind`: the app opens on
+  Wind.
 - **Tile**: pull down Quick Settings twice, the pencil, and drag **SG PSI** in. It shows the
   PSI and band; tapping it opens the app.
 - **Updates**: the Edge Tray's circled download button says you have the newest version.

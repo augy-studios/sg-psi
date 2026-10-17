@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The home screen widget (PsiWidget.java). Resizable either way; one row of cells high, it
-     drops the regions. Refreshed by ReadingsWorker, not by updatePeriodMillis. -->
+<!-- The SG PSI widget (PsiWidget.java, RegionWidget.java). Resizable either way; one row of
+     cells high, it drops the regions. A region is picked as it's added (WidgetConfigActivity),
+     and again from Android 12's reconfigure or the widget's title. Refreshed by ReadingsWorker,
+     not by updatePeriodMillis. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
     android:minHeight="110dp"
@@ -14,4 +16,6 @@
     android:previewLayout="@layout/widget_psi"
     android:previewImage="@mipmap/ic_launcher"
     android:description="@string/widget_description"
+    android:configure="org.uwuapps.sgpsi.WidgetConfigActivity"
+    android:widgetFeatures="reconfigurable"
     android:widgetCategory="home_screen" />

@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The home screen widget (PsiWidget.java): the 24-hour PSI across Singapore and its band, the
-     1-hour PM2.5, each region's PSI in a row of cells (dropped when the widget is one cell high),
-     and when it was updated. -->
+<!-- The region widgets (RegionWidget.java), SG PSI and SG PM2.5: the reading for the region
+     picked and its band (widget_hero), the other reading under it (widget_sub), each region's in
+     a row of cells (dropped when the widget is one cell high), and when it was updated. The title
+     picks the region. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
     android:layout_width="match_parent"
@@ -39,6 +40,7 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/widget_hero"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
@@ -88,7 +90,7 @@
             </LinearLayout>
 
             <TextView
-                android:id="@+id/widget_pm25"
+                android:id="@+id/widget_sub"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"

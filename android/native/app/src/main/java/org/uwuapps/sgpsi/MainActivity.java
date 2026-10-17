@@ -18,6 +18,8 @@
  */
 package org.uwuapps.sgpsi;
 
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
@@ -118,6 +120,16 @@ public class MainActivity extends BridgeActivity {
         if (url != null && bridge != null) bridge.getWebView().loadUrl(url);
     }
 
+    // Opens the app on one of the site's views ("map", "trends", …) through its uwu://sgpsi/
+    // link, for the widgets and the tile. The launcher shortcuts use the same links
+    // (res/xml/shortcuts.xml).
+    static PendingIntent page(Context context, String view) {
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("uwu://sgpsi/" + view), context, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        return PendingIntent.getActivity(context, view.hashCode(), intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
     // The site's page an intent asks for, or null for the page as it is. A tapped PSI alert or
     // morning summary is null: the app opens on the Overview, with the latest readings.
     static String pageFor(Intent intent) {
@@ -128,11 +140,13 @@ public class MainActivity extends BridgeActivity {
         if ("https".equals(data.getScheme()) && HOST.equalsIgnoreCase(data.getHost())) {
             return data.toString();
         }
-        // uwu://sgpsi/map to the site's Map view. uwu:// is shared by UwU Apps' apps, each
-        // answering its own host.
+        // uwu://sgpsi/map to the site's Map view, and so on for each view (the launcher
+        // shortcuts, the widgets and the tile use these). uwu://sgpsi/ on its own, or with a
+        // path that isn't a view, opens the app as it is, rather than reloading the page.
+        // uwu:// is shared by UwU Apps' apps, each answering its own host.
         if ("uwu".equals(data.getScheme()) && "sgpsi".equalsIgnoreCase(data.getHost())) {
-            String view = data.getPath() == null ? "" : data.getPath().replaceAll("^/+|/+$", "");
-            return SITE + "/" + (view.matches(VIEWS) ? "#" + view : "");
+            String view = data.getPath() == null ? "" : data.getPath().replaceAll("^/+|/+$", "").toLowerCase(java.util.Locale.ROOT);
+            return view.matches(VIEWS) ? SITE + "/#" + view : null;
         }
         return null;
     }
