@@ -1,7 +1,7 @@
 // Bump on every deploy that changes anything this worker serves. The browser
 // compares this file byte for byte, so an unchanged VERSION means no update
 // reaches anybody and the update bar never appears.
-const VERSION = "v12";
+const VERSION = "v14";
 const CACHE = `sgpsi-${VERSION}`;
 
 // Kept across versions, so an update doesn't throw away what makes the site work
@@ -30,8 +30,11 @@ const ASSETS = [
   "/js/bands.js",
   "/js/charts.js",
   "/js/map.js",
+  "/js/app-bridge.js",
   "/js/alerts.js",
   "/js/update.js",
+  "/js/app-update.js",
+  "/js/app-icon.js",
   "/vendor/leaflet/leaflet.js",
   "/vendor/leaflet/leaflet.css",
   "/manifest.json",
@@ -40,6 +43,12 @@ const ASSETS = [
   "/SGPSI-512.png",
   "/SGPSI-main.png",
   "/SGPSI-badge.png",
+  // The favicon and brand logo by band (script.js, showState).
+  "/icons/SGPSI-good.svg",
+  "/icons/SGPSI-moderate.svg",
+  "/icons/SGPSI-unhealthy.svg",
+  "/icons/SGPSI-very-unhealthy.svg",
+  "/icons/SGPSI-hazardous.svg",
 ];
 const SHELL = new Set(ASSETS);
 
@@ -104,9 +113,10 @@ self.addEventListener("push", (event) => {
       body: data.body || "",
       tag: "psi-alert",
       renotify: true,
-      icon: "/SGPSI-192.png",
-      // The status bar's icon. Android draws only its shape, so this is the wind
-      // mark on a transparent background rather than the app icon's solid square.
+      // The band's own icon, in colour, beside the text (api/_push/notify.js).
+      icon: /^\/icons\/SGPSI-[a-z-]+-192\.png$/.test(data.icon || "") ? data.icon : "/SGPSI-192.png",
+      // The status bar's icon: the gauge and mascot in colour, with nothing behind them.
+      // Android draws only its shape there.
       badge: "/SGPSI-badge.png",
       data: { url: data.url || "/" },
     })

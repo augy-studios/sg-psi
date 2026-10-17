@@ -16,12 +16,19 @@ Live at **[sgpsi.uwuapps.org](https://sgpsi.uwuapps.org)**
 - **PSI alerts**: a notification when the PSI in a chosen region reaches a chosen level
 - **Works offline**, installs as an app, and follows the uwuapps theme, with light, dark
   and time-based modes
+- **The icon shows the PSI**: its gauge and face follow the worst region's band, in the tab's
+  favicon and the Android app's icon
+- **Android app**: everything above, plus alerts that follow where you are, home screen
+  widgets, a Quick Settings tile and a 7am summary. It updates itself from
+  [the releases](https://github.com/augy-studios/sg-psi/releases)
 
 ## Layout
 
 ```text
 sg-psi/
 ├── main-site/       the site and its Vercel Functions; setup in main-site/README.md
+├── android/         the Android app (Capacitor); building it in android/README.md
+├── release/         the signed APKs, one folder per version; publishing in release/README.md
 ├── migrations/      SQL to run in the Supabase SQL editor, in order
 └── *.json           data.gov.sg's API specs for the PSI, PM2.5 and wind feeds
 ```

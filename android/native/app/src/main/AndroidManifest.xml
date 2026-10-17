@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SG PSI for Android: see android/README.md for what each part is for. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- PSI alerts, the morning summary and new versions (Notifications.java), only once you
+         turn one on in the alerts window. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- The app updating itself from GitHub (UpdateActivity.java). Each update still asks you on
+         Android's own install screen. Not allowed on Google Play: drop it for a Play build. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- "Where I am" for PSI alerts (Follow.java): which of NEA's five regions you're in, from
+         rough location (cell towers and wifi, not GPS), checked every half hour with the app
+         closed, hence all the time. Only asked when you pick "Where I am", and only the region
+         leaves the phone. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <!-- Firebase's notifications use these unless the push names its own
+             (main-site/api/_push/fcm.js). -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification_icon" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/brand_ink" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="alerts" />
+
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true">
+
+            <!-- No launcher entry of its own: that's the icon aliases below. -->
+
+            <!-- The site's own links open in the app: Android checks the site lists this app's
+                 signing key in main-site/.well-known/assetlinks.json. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="sgpsi.uwuapps.org" />
+            </intent-filter>
+
+            <!-- uwu://sgpsi/ links (MainActivity.pageFor). Only the sgpsi host, so UwU Apps'
+                 other apps can answer uwu:// links of their own. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="uwu" android:host="sgpsi" />
+            </intent-filter>
+        </activity>
+
+        <!-- The launcher's entry, one per PSI band, each with that band's icon: LiveIcon.java
+             enables the one for the worst region's band and disables the rest. Good's is enabled
+             to begin with. Renaming or removing one would leave phones that had it enabled with
+             no launcher entry, so keep these names. -->
+        <activity-alias
+            android:name=".IconGood"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:label="@string/app_name"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconModerate"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_moderate"
+            android:roundIcon="@mipmap/ic_launcher_moderate_round"
+            android:label="@string/app_name"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconUnhealthy"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_unhealthy"
+            android:roundIcon="@mipmap/ic_launcher_unhealthy_round"
+            android:label="@string/app_name"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconVeryUnhealthy"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_very_unhealthy"
+            android:roundIcon="@mipmap/ic_launcher_very_unhealthy_round"
+            android:label="@string/app_name"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconHazardous"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher_hazardous"
+            android:roundIcon="@mipmap/ic_launcher_hazardous_round"
+            android:label="@string/app_name"
+            android:enabled="false"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- The app updating itself, for the site's update bar and the Edge Tray's "Check for
+             updates" (UpdateActivity.java), and the installer's answers to it. Neither is
+             exported: only this app starts them. -->
+        <activity android:name=".UpdateActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:theme="@style/UpdateTheme" />
+        <receiver android:name=".UpdateActivity$InstallStatus"
+            android:exported="false" />
+
+        <!-- The home screen widget (PsiWidget.java). Exported for the launcher, the only one
+             that sends APPWIDGET_UPDATE; its refresh button is an explicit broadcast. -->
+        <receiver android:name=".PsiWidget"
+            android:label="@string/widget_name"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/psi_widget_info" />
+        </receiver>
+
+        <!-- The SG PSI icon widget (PsiIconWidget.java): the app icon in the PSI's band. -->
+        <receiver android:name=".PsiIconWidget"
+            android:label="@string/icon_widget_name"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/psi_icon_widget_info" />
+        </receiver>
+
+        <!-- The Quick Settings tile (PsiTile.java). Its icon follows the band; this is the one
+             Android shows before it's added. -->
+        <service android:name=".PsiTile"
+            android:label="@string/tile_name"
+            android:icon="@drawable/tile_good"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

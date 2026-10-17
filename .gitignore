@@ -1,0 +1,37 @@
+# Secrets. .env.example is the committed template; anything with real values
+# stays out of the repo.
+.env
+.env.*
+!.env.example
+
+# The Android app's signing key, its passwords, and Firebase's files, wherever
+# they end up. android/.gitignore covers its own folder; these catch a key
+# saved anywhere else in the repository by mistake.
+*.keystore
+*.jks
+*.p12
+*.pfx
+keystore.properties
+google-services.json
+*firebase-adminsdk*.json
+# A Firebase service account key: Google names it <project-id>-<12 hex digits>.json, and
+# it belongs in Vercel only (android/FIREBASE-SETUP.md, step 4).
+*-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f].json
+
+# release/<version>/sg-psi-<version>.apk is built by android/build-apk.ps1
+# and committed, so nothing under release/ is ignored.
+
+# Vercel
+.vercel
+
+# Local tooling
+node_modules/
+*.log
+
+# Editors and operating systems
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini

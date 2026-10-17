@@ -1,6 +1,7 @@
 // NEA's bands and advice, the five regions, and Singapore-time formatting, shared by
 // every view. The 24-hour PSI thresholds are also in api/_lib/bands.js, which the
-// alerts use: keep the two in step.
+// alerts use, and android/.../Readings.java, for the app's widget and tile: keep the
+// three in step.
 // Plain script, not a module: published on window.SgPsi.
 
 (function () {

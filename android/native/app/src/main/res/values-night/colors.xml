@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#1F2821</color>
+    <color name="brand_ink">#BFF5CF</color>
+    <color name="widget_bg">#151B18</color>
+    <color name="widget_cell">#1F2924</color>
+    <color name="widget_ink">#EEF2EF</color>
+    <color name="widget_muted">#9AA7A0</color>
+    <color name="band_5">#C45BB0</color>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The SG PSI icon widget (PsiIconWidget.java): one cell, like an app icon. Refreshed by
+     ReadingsWorker, not by updatePeriodMillis. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="40dp"
+    android:minHeight="40dp"
+    android:targetCellWidth="1"
+    android:targetCellHeight="1"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_icon"
+    android:previewLayout="@layout/widget_icon"
+    android:previewImage="@mipmap/ic_launcher_round"
+    android:description="@string/icon_widget_description"
+    android:widgetCategory="home_screen" />

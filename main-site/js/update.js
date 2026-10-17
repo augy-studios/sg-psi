@@ -4,7 +4,11 @@
 // One bar, one state, one precedence order (update-bar-spec.md): being offline
 // outranks a new version being ready, and only the more urgent of the two draws.
 // A new version never activates on its own: it waits until somebody presses Reload.
-// Plain script, not a module; publishes nothing.
+//
+// In the Android app the same bar also says when a new version of the app itself is out
+// (js/app-update.js), and its Update hands over to the app's own updater. The site's new
+// version comes first, as it's one tap and the app's turn comes straight after the reload.
+// Plain script, not a module: published on window.SgUpdate, for js/app-update.js.
 
 (function () {
   const SW_URL = "/sw.js";
@@ -16,6 +20,9 @@
     later: "Not now",
     offlineLabel: "Offline",
     offline: "You're offline. Showing the last readings saved on this device.",
+    appLabel: "App update",
+    appReady: (version) => `Version ${version} of the SG PSI app is out.`,
+    appUpdate: "Update",
   };
 
   let registration = null;
@@ -24,6 +31,10 @@
   // For this page view only. Never stored: "Not now" means not now.
   let dismissed = false;
   let offline = !navigator.onLine;
+  // A newer Android app than the one running, { version, ... } from /api/app-release, and
+  // whether "Not now" was pressed on it.
+  let appUpdate = null;
+  let appDismissed = false;
 
   function watchForUpdate() {
     if (!registration) return;
@@ -96,6 +107,7 @@
   function state() {
     if (offline) return "offline";
     if (waitingWorker && !dismissed) return "update";
+    if (appUpdate && !appDismissed) return `app:${appUpdate.version}`;
     return null;
   }
 
@@ -128,6 +140,27 @@
     if (now === "offline") {
       bar.setAttribute("aria-label", STRINGS.offlineLabel);
       bar.innerHTML = `<div class="update-notice-inner"><p>${STRINGS.offline}</p></div>`;
+    } else if (now.startsWith("app:")) {
+      const version = appUpdate.version;
+      bar.setAttribute("aria-label", STRINGS.appLabel);
+      bar.innerHTML = `
+        <div class="update-notice-inner">
+          <p>${window.UwuUI.esc(STRINGS.appReady(version))}</p>
+          <button type="button" class="btn" data-sw-update>${STRINGS.appUpdate}</button>
+          <button type="button" class="btn secondary" data-sw-later>${STRINGS.later}</button>
+        </div>
+      `;
+
+      bar.querySelector("[data-sw-update]").addEventListener("click", () => {
+        // The app's update window downloads it, checks it, and opens Android's own
+        // installer (android/.../UpdateActivity.java).
+        window.AppBridge.call("SgPsi", "update", { check: false, version }).catch(() => {});
+      });
+
+      bar.querySelector("[data-sw-later]").addEventListener("click", () => {
+        appDismissed = true;
+        render();
+      });
     } else {
       bar.setAttribute("aria-label", STRINGS.label);
       bar.innerHTML = `
@@ -155,6 +188,22 @@
       sizer.observe(bar);
     }
   }
+
+  window.SgUpdate = {
+    // A newer Android app is out (js/app-update.js).
+    offerAppUpdate(latest) {
+      if (appUpdate?.version === latest.version) return;
+      appUpdate = latest;
+      appDismissed = false;
+      render();
+    },
+    // Asks the server for a new worker now, rather than on the browser's own schedule: the
+    // Edge Tray's "Check for updates". A new one found shows the bar as usual, once it has
+    // installed.
+    checkSiteUpdate() {
+      return registration && navigator.onLine ? registration.update().catch(() => {}) : Promise.resolve();
+    },
+  };
 
   window.addEventListener("offline", () => {
     offline = true;

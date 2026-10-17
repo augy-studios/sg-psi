@@ -11,6 +11,11 @@
             "src": "SGPSI-512.png",
             "type": "image/png",
             "sizes": "512x512"
+        },
+        {
+            "src": "SGPSI-main.png",
+            "type": "image/png",
+            "sizes": "2250x2250"
         }
     ],
     "screenshots": [{

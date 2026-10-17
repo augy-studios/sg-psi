@@ -290,6 +290,7 @@
       now = await res.json();
       loadFailed = false;
       renderAll();
+      shareWithApp(now);
     } catch (err) {
       console.warn("readings unavailable:", err);
       loadFailed = true;
@@ -298,6 +299,16 @@
       $("#refreshBtn").classList.remove("busy");
       renderStatus();
     }
+  }
+
+  // In the Android app, the readings just loaded go to its home screen widget and Quick
+  // Settings tile too (SgPsiPlugin.readings), so they're as fresh as the page while it's open.
+  function shareWithApp(readings) {
+    const app = window.AppBridge;
+    if (!app?.native) return;
+    app.ready(5000).then((ready) => {
+      if (ready && app.has("readings")) app.call("SgPsi", "readings", { now: readings }).catch(() => {});
+    });
   }
 
   function renderStatus() {
@@ -338,6 +349,8 @@
       ? P.ADVICE_GROUPS.map((g, i) => `<div><dt>${esc(g)}</dt><dd>${esc(P.ADVICE[psiB.band.id][i])}</dd></div>`).join("")
       : "";
 
+    showState(psiB?.band);
+
     $("#pm25Time").textContent = now.pm25 ? P.sgWhen(now.pm25.time) : "";
     $("#pm25Range").textContent = rangeText(pmR);
     chip($("#pm25Band"), bandText(pmR, P.pm25Band));
@@ -354,6 +367,14 @@
           <p class="region-sub">PM2.5 <strong>${num(m)}</strong> µg/m³${mb ? `, ${esc(mb.label.toLowerCase())}` : ""}</p>
         </article>`;
     }).join("");
+  }
+
+  // The favicon and the brand logo show the worst region's band, as the Android app's icon does:
+  // the gauge's needle and the mascot's face, Good to Hazardous (icons/SGPSI-<band>.svg).
+  function showState(band) {
+    const href = `/icons/SGPSI-${band?.id || "good"}.svg`;
+    if ($("#stateFavicon").getAttribute("href") !== href) $("#stateFavicon").setAttribute("href", href);
+    if ($("#brandLogo").getAttribute("src") !== href) $("#brandLogo").setAttribute("src", href);
   }
 
   // ---------- pollutants ----------

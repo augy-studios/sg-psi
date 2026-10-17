@@ -141,11 +141,20 @@ h1, h2, h3 { font-weight: normal; }
   /* Over map tiles a translucent surface isn't enough: the tiles show through. */
   --surface-solid: color-mix(in srgb, var(--page-bg) 90%, transparent);
 
+  /* What the phone's status bar, notch and gesture bar cover. In the Android app the
+     page runs edge to edge and Capacitor passes their sizes in as --safe-area-inset-*
+     (android/capacitor.config.json, SystemBars), as its WebView's env() says 0; a
+     browser has env() only. Everything here reads these, never env() directly. */
+  --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+
   /* Where the floating controls start: under the update bar when there is one,
      which already clears the notch, or under the notch. */
-  --hud-top: max(calc(var(--notice-h, 0px) + 14px), calc(env(safe-area-inset-top) + 14px));
-  --hud-edge: max(16px, calc(env(safe-area-inset-right) + 16px));
-  --hud-edge-left: max(16px, calc(env(safe-area-inset-left) + 16px));
+  --hud-top: max(calc(var(--notice-h, 0px) + 14px), calc(var(--safe-top) + 14px));
+  --hud-edge: max(16px, calc(var(--safe-right) + 16px));
+  --hud-edge-left: max(16px, calc(var(--safe-left) + 16px));
   --glass-btn: 44px;
   /* One pace for the tray, its buttons, its tab and the page making room. */
   --tray-time: 0.34s;
@@ -154,6 +163,10 @@ h1, h2, h3 { font-weight: normal; }
      is worked out from it. */
   --column-pad: 14px;
 }
+
+/* The Android app hides the status bar (MainActivity.java), so the page starts at the
+   top of the screen; js/app-bridge.js sets this. */
+:root[data-statusbar="hidden"] { --safe-top: 0px; }
 
 /* flat, static colour derived from theme, no gradients */
 body {
@@ -208,6 +221,9 @@ body {
   justify-content: center;
   background: rgba(10, 15, 12, 0.35);
   padding: 12px;
+  /* A modal never reaches under the status bar or the gesture bar. */
+  padding-top: max(12px, var(--safe-top));
+  padding-bottom: max(12px, var(--safe-bottom));
   opacity: 1;
   visibility: visible;
   transition: opacity 0.2s ease, visibility 0s linear 0s;
@@ -359,7 +375,7 @@ body.modal-open { overflow: hidden; }
   margin: 0 auto;
   padding: 0.5rem 14px;
   /* Under the notch on a phone, where the bar is the topmost thing on screen. */
-  padding-top: max(0.5rem, env(safe-area-inset-top));
+  padding-top: max(0.5rem, var(--safe-top));
 }
 
 .update-notice p { flex: 1 1 auto; min-width: 0; }
@@ -482,11 +498,13 @@ body.modal-open { overflow: hidden; }
   /* Only opening is staggered: the delay comes from the state being entered. */
   transition-delay: calc(var(--i, 0) * 18ms), calc(var(--i, 0) * 18ms), calc(var(--i, 0) * 18ms), 0s, 0s, 0s;
 }
-/* Views, rule, alerts, theme. Add a line for each item the tray gains. */
+/* Views, rule, alerts, theme, and in the Android app "Check for updates" before theme
+   (js/app-update.js). Add a line for each item the tray gains. */
 .tray-buttons > :nth-child(2) { --i: 1; }
 .tray-buttons > :nth-child(3) { --i: 2; }
 .tray-buttons > :nth-child(4) { --i: 3; }
 .tray-buttons > :nth-child(5) { --i: 4; }
+.tray-buttons > :nth-child(6) { --i: 5; }
 .tray.collapsed .tray-buttons > * {
   opacity: 0;
   translate: 12px 0; /* towards the edge it leaves by */
@@ -517,7 +535,8 @@ body.modal-open { overflow: hidden; }
   max-width: 720px;
   margin: 0 auto;
   padding: var(--column-pad);
-  padding-bottom: 48px;
+  /* Clear of the gesture bar, where the page runs under it. */
+  padding-bottom: calc(48px + var(--safe-bottom));
 }
 
 /* Where the column would run under the open tray, it makes room for it, and
@@ -1032,7 +1051,7 @@ body.view-map .status {
   border-bottom-color: var(--surface-border);
 }
 .leaflet-bar a.leaflet-disabled { background: var(--surface-solid); color: var(--muted); }
-.leaflet-bottom.leaflet-right { margin-bottom: max(0px, env(safe-area-inset-bottom)); }
+.leaflet-bottom.leaflet-right { margin-bottom: var(--safe-bottom); }
 .leaflet-bottom.leaflet-right .leaflet-bar { margin-right: var(--hud-edge); }
 .leaflet-control-attribution {
   background: var(--surface-solid) !important;
@@ -1124,9 +1143,56 @@ body.view-map .status {
   background: var(--brand-fill);
   color: var(--on-brand);
 }
+.choice > [data-icon] { display: inline-flex; margin-right: 6px; }
+.choice svg { width: 16px; height: 16px; }
 .alerts-toggle { margin-top: 6px; }
 .alerts-note { font-size: 0.85rem; color: var(--muted); }
 .alerts-note[data-tone="bad"] { color: var(--error); }
+
+/* The Android app's own notifications, as switches (js/alerts.js). */
+.toggle-list { display: flex; flex-direction: column; gap: 6px; }
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  cursor: pointer;
+}
+.toggle-row-text { display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; color: var(--ink); }
+.toggle-row-text small { font-size: 0.78rem; color: var(--muted-strong); line-height: 1.35; }
+
+.switch {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  position: relative;
+  width: 44px;
+  height: 26px;
+  margin: 0;
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-strong);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: translate 0.18s ease;
+}
+.switch:checked { background: var(--brand-ink); }
+.switch:checked::after { translate: 18px 0; background: #fff; }
+.switch:disabled { opacity: 0.5; cursor: progress; }
 
 /* ---- footer ---- */
 .site-footer {
@@ -1139,11 +1205,11 @@ body.view-map .status {
 @media (max-width: 480px) {
   :root {
     --glass-btn: 40px;
-    --hud-edge: max(10px, calc(env(safe-area-inset-right) + 10px));
-    --hud-edge-left: max(10px, calc(env(safe-area-inset-left) + 10px));
+    --hud-edge: max(10px, calc(var(--safe-right) + 10px));
+    --hud-edge-left: max(10px, calc(var(--safe-left) + 10px));
     --column-pad: 10px;
   }
-  .container { padding-bottom: 40px; }
+  .container { padding-bottom: calc(40px + var(--safe-bottom)); }
   .update-notice-inner { flex-wrap: wrap; padding-left: 10px; padding-right: 10px; gap: 0.5rem; }
   .update-notice p { flex-basis: 100%; }
   .swatch-grid { grid-template-columns: 1fr; }

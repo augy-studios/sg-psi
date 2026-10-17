@@ -14,17 +14,25 @@ main-site/
 │   ├── bands.js                       NEA's PSI and PM2.5 bands, health advice, SGT formatting
 │   ├── charts.js                      the SVG line chart behind Trends and Wind
 │   ├── map.js                         Leaflet on OpenStreetMap tiles
-│   └── alerts.js                      PSI alerts: subscribing to web push
+│   ├── alerts.js                      PSI alerts: subscribing to web push, or FCM in the Android app
+│   ├── app-bridge.js                  the Android app's plugin, when the page is open in it
+│   └── app-update.js                  the Android app's update check and Edge Tray button
+├── icons/                             the icon in each PSI band, Good to Hazardous: the favicon and
+│                                      brand logo follow it (script.js), and a web push alert shows it
+├── SGPSI-*.png, favicon.ico           the Good icon; SGPSI-badge.png is the notification badge
 ├── vendor/leaflet/                    Leaflet 1.9.4, self-hosted so the map works offline
 ├── sw.js                              service worker
 ├── api/
 │   ├── now.js                         latest PSI, PM2.5 and wind
 │   ├── history.js                     last 24 hours or 7 days, for the charts
 │   ├── cron/collect.js                every 5 minutes: store readings, send alerts
+│   ├── cron/morning.js                7am: the Android app's morning summary
+│   ├── app-release.js                 the Android app's newest release on GitHub
 │   ├── push/vapid-key.js              public VAPID key for subscribing
 │   ├── push/devices/[id].js           turn a device's alerts on, change them, off, or test them
+│   ├── push/release.js                GitHub webhook: tells the Android app a release is out
 │   ├── _lib/                          data.gov.sg, Supabase, PSI bands
-│   └── _push/                         Upstash store, validation, the alert rules
+│   └── _push/                         Upstash store, validation, the alert rules, FCM
 └── .env.example                       every environment variable, explained
 ```
 
@@ -59,6 +67,10 @@ Variables reach only deployments made after they are added, so redeploy afterwar
 
      Set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (mark it Sensitive) and
      `VAPID_SUBJECT` (`mailto:` an address push services can reach).
+5. **The Android app.** `FIREBASE_SERVICE_ACCOUNT`, `GITHUB_WEBHOOK_SECRET` and,
+   optionally, `GITHUB_TOKEN`: [`../android/FIREBASE-SETUP.md`](../android/FIREBASE-SETUP.md)
+   walks through them. The morning summary runs at 07:00 Singapore time (23:00 UTC in
+   `vercel.json`).
 
 ### Checking it
 
@@ -86,8 +98,9 @@ Variables reach only deployments made after they are added, so redeploy afterwar
 Each new hourly reading is compared with the last (`api/_push/notify.js`). A device set
 to, say, Unhealthy in the West hears when the West reaches Unhealthy, when it changes to
 another band while still at or above it, and when it eases back below. "Any region"
-follows whichever region is worst. A reading revised within the same hour is not
-announced twice.
+follows whichever region is worst. "Where I am", in the Android app, follows the region
+the phone last said it's in. A reading revised within the same hour is not announced
+twice.
 
 ## Offline
 
@@ -117,6 +130,7 @@ works: readings come straight from data.gov.sg, and Trends asks it for each day.
 
 ## Privacy
 
-For alerts, Upstash holds each device's push subscription, its area and its level,
-under a random ID the browser made up. No names or locations. Turning alerts off
+For alerts, Upstash holds each device's push subscription (or the Android app's FCM
+token), its area and its level, under a random ID the browser made up. No names or
+locations: with "Where I am", only which of the five regions the phone is in. Turning alerts off
 deletes the device. Supabase holds only NEA's public readings.

@@ -8,7 +8,8 @@
         "api/history.js": { "maxDuration": 30 }
     },
     "crons": [
-        { "path": "/api/cron/collect", "schedule": "*/5 * * * *" }
+        { "path": "/api/cron/collect", "schedule": "*/5 * * * *" },
+        { "path": "/api/cron/morning", "schedule": "0 23 * * *" }
     ],
     "headers": [
         {

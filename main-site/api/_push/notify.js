@@ -3,11 +3,17 @@
 // cron once it has stored the reading.
 //
 // A device set to Unhealthy in the West hears when the West reaches Unhealthy, when it
-// moves to another band while still at or above it, and when it eases back below.
+// moves to another band while still at or above it, and when it eases back below. A device on
+// "Where I am" (the Android app, android/.../Follow.java) is treated as set to the region it
+// last said it's in.
+//
+// Browsers get Web Push; the Android app, whose subscription is { fcm: token }, gets FCM
+// (./fcm.js). Either works without the other set up.
 
 import webpush from "web-push";
 import { ADVICE, PSI_BANDS, floorOf, levelOf, psiLevel } from "../_lib/bands.js";
 import { byRegion } from "../_lib/datagov.js";
+import { fcmConfigured, sendFcm } from "./fcm.js";
 import { devices, getState, setState, storeConfigured } from "./store.js";
 import { AREAS } from "./validate.js";
 
@@ -19,10 +25,24 @@ const TEST_TTL = 5 * 60;
 // Sends in flight at once, so a long device list doesn't open thousands of connections.
 const SEND_BATCH = 50;
 
-export function pushConfigured() {
+export function vapidConfigured() {
   const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = process.env;
-  return storeConfigured() && Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && VAPID_SUBJECT);
+  return Boolean(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && VAPID_SUBJECT);
 }
+
+// Alerts can go out to at least one kind of device.
+export function pushConfigured() {
+  return storeConfigured() && (vapidConfigured() || fcmConfigured());
+}
+
+// Whether this device's kind of push is set up: FCM for the app, Web Push for a browser.
+export function canReach(device) {
+  return device?.subscription?.fcm ? fcmConfigured() : vapidConfigured();
+}
+
+// The area a device's alerts are for: its region, or "islandwide", with "Where I am" resolved
+// to where it last was.
+export const areaOf = (device) => (device.area === "here" ? device.region || "islandwide" : device.area);
 
 const areaText = (area) => (area === "islandwide" ? "in Singapore" : `in the ${area[0].toUpperCase()}${area.slice(1)}`);
 
@@ -75,17 +95,21 @@ export async function notifyPsi(item) {
   const payloads = {};
   const sends = [];
   for (const [id, device] of await devices.all()) {
-    if (!device || !changed.includes(device.area)) continue;
+    if (!device) continue;
+    const area = areaOf(device);
+    if (!changed.includes(area) || !canReach(device)) continue;
     const threshold = levelOf(device.level);
-    const before = prev.levels[device.area];
-    const now = levels[device.area];
+    const before = prev.levels[area];
+    const now = levels[area];
     // Only changes at or above the level asked for, and the step back below it.
     if (Math.max(before, now) < threshold) continue;
 
-    const key = `${device.area}|${device.level}`;
+    const key = `${area}|${device.level}`;
     payloads[key] ??= JSON.stringify({
       type: "psi-alert",
-      ...message(device.area, before, now, values[device.area], item.timestamp, threshold),
+      ...message(area, before, now, values[area], item.timestamp, threshold),
+      // The band's icon, in colour (icons/, sw.js). The app's own notification shows the app's.
+      icon: `/icons/SGPSI-${PSI_BANDS[now].id}-192.png`,
       url: "/",
     });
     sends.push([id, device, payloads[key]]);
@@ -101,27 +125,31 @@ export async function notifyPsi(item) {
   return { changed: changed, sent, dropped };
 }
 
-// One push to one device, through the same keys, payload shape and service worker
-// handler as a real alert, so it proves the whole path. "sent", "dropped" or "failed".
+// One push to one device, through the same keys, payload shape and service worker (or app)
+// as a real alert, so it proves the whole path. "sent", "dropped" or "failed".
 export async function notifyTest(id, device) {
   useVapid();
   const band = PSI_BANDS[levelOf(device.level)].label.toLowerCase();
+  const where = device.area === "here" ? "where you are" : areaText(device.area);
   const payload = JSON.stringify({
     type: "psi-alert",
     title: "Test alert from SG PSI",
-    body: `Alerts work on this device. You'll hear when the 24-hour PSI ${areaText(device.area)} reaches ${band}.`,
+    body: `Alerts work on this device. You'll hear when the 24-hour PSI ${where} reaches ${band}.`,
     url: "/",
   });
   return send(id, device, payload, { TTL: TEST_TTL, urgency: "high" });
 }
 
+// Only with the keys there: an app-only setup has none, and web-push throws without them.
 function useVapid() {
+  if (!vapidConfigured()) return;
   webpush.setVapidDetails(process.env.VAPID_SUBJECT, process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
 }
 
 async function send(id, device, payload, options = { TTL: PUSH_TTL, urgency: "normal" }) {
   try {
-    await webpush.sendNotification(device.subscription, payload, options);
+    if (device.subscription.fcm) await sendFcm(device.subscription.fcm, payload, { ttl: options.TTL });
+    else await webpush.sendNotification(device.subscription, payload, options);
     return "sent";
   } catch (err) {
     // 404 and 410 mean the subscription is gone for good: permission revoked, app

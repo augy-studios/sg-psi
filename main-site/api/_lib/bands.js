@@ -1,5 +1,6 @@
 // NEA's bands for the 24-hour PSI, for the alerts the cron sends. The page has its own
-// copy in js/bands.js, with the advice text too: keep the thresholds in step.
+// copy in js/bands.js, with the advice text too, and the Android app another in
+// android/.../Readings.java: keep the thresholds in step.
 
 export const PSI_BANDS = [
   { id: "good", label: "Good", max: 50 },

@@ -1,0 +1,22 @@
+{
+  "appId": "org.uwuapps.sgpsi",
+  "appName": "SG PSI",
+  "webDir": "www",
+  "server": {
+    "url": "https://sgpsi.uwuapps.org",
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "path": "native",
+    "appendUserAgent": "SGPSIApp/1"
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    },
+    "PushNotifications": {
+      "presentationOptions": ["alert", "sound"]
+    }
+  }
+}

@@ -7,6 +7,9 @@ import { REGION_NAMES } from "../_lib/datagov.js";
 
 // "islandwide" is whichever region is worst.
 export const AREAS = ["islandwide", ...REGION_NAMES];
+// "here" is "Where I am", in the Android app only: the device sends the region it's in with
+// it, and again each time that changes (android/.../Follow.java).
+const CHOSEN_AREAS = [...AREAS, "here"];
 
 // The server POSTs to whatever endpoint a subscription names, so only the browsers'
 // own push services are accepted. Otherwise anyone could point it at an arbitrary URL.
@@ -18,6 +21,8 @@ const PUSH_HOSTS = [
 ];
 
 const ID_RE = /^[A-Za-z0-9-]{8,64}$/;
+// An FCM registration token, the Android app's subscription: { fcm: token } (./fcm.js).
+const FCM_RE = /^[A-Za-z0-9_:-]{100,400}$/;
 const B64URL_RE = /^[A-Za-z0-9_-]+=*$/;
 
 export class ValidationError extends Error {}
@@ -30,16 +35,27 @@ export function isId(value) {
   return typeof value === "string" && ID_RE.test(value);
 }
 
-// { subscription, area, level }: where to watch and the band that sets an alert off.
+// { subscription, area, level }: where to watch and the band that sets an alert off. With
+// area "here", also region: where the device is now, or "islandwide" while it can't tell.
 export function parseDevice(body) {
   if (!body || typeof body !== "object") fail("body must be an object");
-  if (!AREAS.includes(body.area)) fail(`area must be one of ${AREAS.join(", ")}`);
+  if (!CHOSEN_AREAS.includes(body.area)) fail(`area must be one of ${CHOSEN_AREAS.join(", ")}`);
   if (!ALERT_LEVELS.includes(body.level)) fail(`level must be one of ${ALERT_LEVELS.join(", ")}`);
-  return { subscription: parseSubscription(body.subscription), area: body.area, level: body.level };
+  const device = { subscription: parseSubscription(body.subscription), area: body.area, level: body.level };
+  if (body.area === "here") {
+    const region = body.region ?? "islandwide";
+    if (!AREAS.includes(region)) fail(`region must be one of ${AREAS.join(", ")}`);
+    device.region = region;
+  }
+  return device;
 }
 
 function parseSubscription(sub) {
   if (!sub || typeof sub !== "object") fail("subscription is required");
+  if (sub.fcm != null) {
+    if (typeof sub.fcm !== "string" || !FCM_RE.test(sub.fcm)) fail("bad subscription.fcm");
+    return { fcm: sub.fcm };
+  }
 
   let url;
   try {

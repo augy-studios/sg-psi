@@ -18,6 +18,8 @@
     bell: `<svg ${A}><path d="M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 2h-15z"/><path d="M10 21a2.2 2.2 0 0 0 4 0"/></svg>`,
     "bell-on": `<svg ${A}><path d="M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 2h-15z"/><path d="M10 21a2.2 2.2 0 0 0 4 0"/><path d="M3.2 8.5a9.5 9.5 0 0 1 2.6-4.3M20.8 8.5a9.5 9.5 0 0 0-2.6-4.3"/></svg>`,
     refresh: `<svg ${A}><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4.5h-4.5"/></svg>`,
+    // The Android app's "Check for updates" (js/app-update.js).
+    download: `<svg ${A}><circle cx="12" cy="12" r="9"/><path d="M12 7.5v8M8.5 12l3.5 3.5 3.5-3.5"/></svg>`,
 
     // ---- views ----
     gauge: `<svg ${A}><path d="M3.5 17a9 9 0 1 1 17 0"/><path d="m12 13 4-4.5"/><circle cx="12" cy="13.5" r="1.2"/></svg>`,

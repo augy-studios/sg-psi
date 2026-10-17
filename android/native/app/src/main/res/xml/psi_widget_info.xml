@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The home screen widget (PsiWidget.java). Resizable either way; one row of cells high, it
+     drops the regions. Refreshed by ReadingsWorker, not by updatePeriodMillis. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="40dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_psi"
+    android:previewLayout="@layout/widget_psi"
+    android:previewImage="@mipmap/ic_launcher"
+    android:description="@string/widget_description"
+    android:widgetCategory="home_screen" />

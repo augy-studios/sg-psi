@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The site's own colours (main-site/style.css): its light page, brand green and band colours.
+     Dark in values-night/colors.xml. -->
+<resources>
+    <color name="background">#EBF3EC</color>
+    <!-- Behind the launcher icon's artwork (mipmap-anydpi-v26), the logo's own green. -->
+    <color name="ic_launcher_background">#CCFFCC</color>
+    <color name="brand_ink">#1F6B3D</color>
+
+    <!-- The widget (PsiWidget.java). -->
+    <color name="widget_bg">#F2F7F3</color>
+    <color name="widget_cell">#E2F5E5</color>
+    <color name="widget_ink">#121815</color>
+    <color name="widget_muted">#5B665F</color>
+
+    <!-- NEA's bands, style.css's band-1 to band-5: Good to Hazardous (PM2.5's Normal to Very high
+         take the first four). -->
+    <color name="band_1">#0CA30C</color>
+    <color name="band_2">#FAB219</color>
+    <color name="band_3">#EC835A</color>
+    <color name="band_4">#D03B3B</color>
+    <color name="band_5">#8B2C7A</color>
+</resources>

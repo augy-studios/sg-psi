@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SG PSI</string>
+    <string name="title_activity_main">SG PSI</string>
+    <string name="package_name">org.uwuapps.sgpsi</string>
+    <string name="custom_url_scheme">org.uwuapps.sgpsi</string>
+
+    <!-- The home screen widget (PsiWidget.java) -->
+    <string name="widget_name">SG PSI</string>
+    <string name="widget_description">The 24-hour PSI and its band across Singapore and in each region, with the 1-hour PM2.5</string>
+    <string name="widget_title">24-hour PSI</string>
+    <string name="widget_title_at">24-hour PSI · %1$s</string>
+    <string name="widget_pm25">PM2.5 %1$s µg/m³ · %2$s</string>
+    <string name="widget_here">%1$s (here)</string>
+    <string name="widget_loading">Getting the readings…</string>
+    <string name="widget_refreshing">Refreshing…</string>
+    <string name="widget_refresh">Refresh</string>
+    <string name="widget_old">Couldn\'t refresh</string>
+    <string name="widget_updated">Updated %1$s</string>
+
+    <!-- The SG PSI icon widget (PsiIconWidget.java) -->
+    <string name="icon_widget_name">SG PSI icon</string>
+    <string name="icon_widget_description">The app\'s icon, its gauge and face showing the PSI\'s band, with the PSI under it</string>
+    <string name="icon_widget_spoken">SG PSI, 24-hour PSI %1$d, %2$s</string>
+
+    <!-- The Quick Settings tile (PsiTile.java) -->
+    <string name="tile_name">SG PSI</string>
+    <string name="tile_value">PSI %1$d</string>
+    <string name="tile_loading">Open the shade again in a moment</string>
+    <string name="tile_description">24-hour PSI %1$d, %2$s, %3$s</string>
+</resources>

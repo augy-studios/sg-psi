@@ -1,8 +1,9 @@
 // Turn PSI alerts on for a device or change its area and level (PUT, sent again on every
-// page load, which also keeps the subscription fresh), off (DELETE: the device is
-// forgotten), or send it a test alert (POST).
+// page load, which also keeps the subscription fresh, and by the Android app itself when
+// "Where I am" moves to another region), off (DELETE: the device is forgotten), or send it
+// a test alert (POST).
 
-import { notifyTest, pushConfigured } from "../../_push/notify.js";
+import { canReach, notifyTest, pushConfigured } from "../../_push/notify.js";
 import { devices, rateLimited, releaseLock, storeConfigured, takeLock } from "../../_push/store.js";
 import { ValidationError, isId, parseDevice } from "../../_push/validate.js";
 
@@ -30,7 +31,7 @@ export default async function handler(req, res) {
       }
       const device = parseDevice(req.body);
       await devices.set(id, { ...device, updatedAt: Date.now() });
-      return res.status(200).json({ area: device.area, level: device.level });
+      return res.status(200).json({ area: device.area, region: device.region, level: device.level });
     }
 
     if (req.method === "DELETE") {
@@ -40,9 +41,13 @@ export default async function handler(req, res) {
 
     // Only the device itself knows its id, so a test can only reach the one asking.
     if (req.method === "POST") {
-      if (!pushConfigured()) return res.status(503).json({ error: "PSI alerts are not set up: VAPID keys missing" });
+      if (!pushConfigured()) return res.status(503).json({ error: "PSI alerts are not set up: VAPID keys and FIREBASE_SERVICE_ACCOUNT both missing" });
       const device = await devices.get(id);
       if (!device) return res.status(404).json({ error: "device not signed up" });
+      if (!canReach(device)) {
+        const missing = device.subscription.fcm ? "FIREBASE_SERVICE_ACCOUNT is missing" : "VAPID keys missing";
+        return res.status(503).json({ error: `PSI alerts are not set up for this device: ${missing}` });
+      }
       if (!(await takeLock(`test:${id}`, TEST_GAP_SECONDS))) return res.status(429).json({ error: "a test was just sent" });
 
       const result = await notifyTest(id, device);
